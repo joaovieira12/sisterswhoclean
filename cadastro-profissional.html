@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro de Profissional | Sisters Who Clean</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- ====================================================================
+  CONEXÃO COM O BANCO DE DADOS (Supabase)
+  1) Crie uma conta grátis em https://supabase.com
+  2) Crie um novo projeto
+  3) Vá em Project Settings > API e copie:
+     - "Project URL"      -> cole em SUPABASE_URL abaixo
+     - "anon public key"  -> cole em SUPABASE_ANON_KEY abaixo
+  4) No Supabase, vá em "SQL Editor" e rode o script que está no
+     arquivo schema.sql (enviado junto) para criar a tabela "profissionais"
+==================================================================== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://hxaeoluhpxamvcaxwjaz.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_gYq1GzSKyuCoLg0bN5qqew_dBx91xoi";
+  let supabaseClient = null;
+</script>
+
+<style>
+  :root{
+    --navy:#13294B;--ink:#13294B;--ink-soft:#5B6B85;--bg:#FFFFFF;--bg-soft:#F5F8FC;
+    --primary:#1E88E5;--primary-dark:#1565C0;--accent:#FFB020;--accent-2:#36C2A4;
+    --line:#E7ECF3;--radius:20px;
+    --shadow-sm:0 4px 14px rgba(19,41,75,.07);
+    --shadow-md:0 14px 34px rgba(19,41,75,.12);
+    --shadow-lg:0 28px 60px rgba(19,41,75,.16);
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',sans-serif;color:var(--ink);background:var(--bg-soft);line-height:1.55;}
+  h1,h2,.brand{font-family:'Poppins',sans-serif;}
+  a{color:inherit;text-decoration:none;}
+  .container{max-width:760px;margin:0 auto;padding:0 24px;}
+
+  header{background:#fff;border-bottom:1px solid var(--line);padding:18px 0;}
+  .nav{display:flex;align-items:center;justify-content:space-between;max-width:760px;margin:0 auto;padding:0 24px;}
+  .brand-wrap{display:flex;align-items:center;gap:10px;}
+  .brand{font-weight:800;color:var(--navy);font-size:1rem;}
+  .brand span{color:var(--primary);}
+  .back-link{font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .back-link:hover{color:var(--primary);}
+
+  .page-hero{padding:56px 0 30px;text-align:center;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;background:#FFF3DC;color:#A66A00;
+    font-weight:700;font-size:.78rem;padding:7px 14px;border-radius:999px;margin-bottom:18px;
+  }
+  .eyebrow::before{content:"✦";color:var(--accent);}
+  .page-hero h1{font-size:2.1rem;color:var(--navy);margin:0 0 14px;font-weight:800;}
+  .page-hero p{color:var(--ink-soft);font-size:1.02rem;max-width:520px;margin:0 auto;}
+
+  .benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:32px 0 8px;}
+  .benefit{
+    background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 14px;text-align:center;
+    box-shadow:var(--shadow-sm);
+  }
+  .benefit .ic{font-size:1.5rem;margin-bottom:8px;}
+  .benefit strong{display:block;font-size:.86rem;color:var(--navy);}
+
+  form.cadastro-form{
+    background:#fff;border:1px solid var(--line);border-radius:24px;padding:36px;
+    box-shadow:var(--shadow-lg);margin:36px 0 60px;
+  }
+  .form-section-title{
+    font-weight:700;color:var(--navy);font-size:.95rem;margin:0 0 16px;
+    padding-bottom:10px;border-bottom:1px solid var(--line);
+  }
+  .form-section-title:not(:first-child){margin-top:30px;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field.full{grid-column:1/-1;}
+  label{font-size:.81rem;font-weight:700;color:var(--navy);}
+  input,select,textarea{
+    border:1.5px solid var(--line);border-radius:13px;padding:13px 15px;font-family:'Inter';font-size:.92rem;
+    background:var(--bg-soft);color:var(--ink);outline:none;transition:border-color .2s;width:100%;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--primary);background:#fff;}
+  textarea{resize:vertical;min-height:80px;}
+
+  .checkbox-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .checkbox-item{
+    display:flex;align-items:center;gap:9px;border:1.5px solid var(--line);border-radius:12px;
+    padding:11px 14px;cursor:pointer;font-size:.88rem;font-weight:600;color:var(--ink-soft);transition:.2s;
+  }
+  .checkbox-item:hover{border-color:var(--primary);}
+  .checkbox-item input{width:auto;accent-color:var(--primary);}
+  .checkbox-item.checked{border-color:var(--primary);background:#E3F1FE;color:var(--navy);}
+
+  .upload-box{
+    display:flex;align-items:center;gap:14px;border:2px dashed var(--line);border-radius:16px;
+    padding:18px;cursor:pointer;background:var(--bg-soft);transition:.2s;
+  }
+  .upload-box:hover{border-color:var(--primary);background:#E3F1FE;}
+  .upload-icon{font-size:1.5rem;}
+  .upload-text strong{font-size:.87rem;color:var(--navy);display:block;}
+  .upload-text span{font-size:.78rem;color:var(--ink-soft);}
+
+  .submit-btn{
+    width:100%;background:var(--primary);color:#fff;padding:16px;border:none;border-radius:999px;
+    font-weight:800;font-size:.97rem;cursor:pointer;transition:.2s;margin-top:28px;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .submit-btn:hover{background:var(--primary-dark);transform:translateY(-2px);}
+  .submit-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+  .form-note{font-size:.78rem;color:var(--ink-soft);text-align:center;margin-top:14px;}
+
+  .status-msg{
+    display:none;padding:16px 18px;border-radius:14px;font-size:.9rem;font-weight:600;margin-bottom:20px;
+  }
+  .status-msg.success{display:block;background:#E3FBF4;color:#0E7A5F;border:1px solid #B5EBDB;}
+  .status-msg.error{display:block;background:#FCE8E8;color:#B3261E;border:1px solid #F5C2C0;}
+  .status-msg.setup{display:block;background:#FFF3DC;color:#A66A00;border:1px solid #FCE3AC;}
+
+  footer{padding:30px 0;text-align:center;color:var(--ink-soft);font-size:.82rem;}
+
+  @media (max-width:640px){
+    .form-row{grid-template-columns:1fr;}
+    .checkbox-grid{grid-template-columns:1fr;}
+    .benefits{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <div class="brand-wrap">
+      <div class="brand">SISTERS WHO <span>CLEAN</span></div>
+    </div>
+    <a class="back-link" href="sisters-who-clean.html">← Voltar para o site</a>
+  </div>
+</header>
+
+<div class="container">
+  <div class="page-hero">
+    <div class="eyebrow">Rede de profissionais</div>
+    <h1>Cadastre-se e comece a receber pedidos</h1>
+    <p>Faça parte da rede de profissionais da Sisters Who Clean e receba solicitações de limpeza na sua região.</p>
+  </div>
+
+  <div class="benefits">
+    <div class="benefit"><div class="ic">📍</div><strong>Pedidos da sua região</strong></div>
+    <div class="benefit"><div class="ic">💬</div><strong>Contato direto pelo WhatsApp</strong></div>
+    <div class="benefit"><div class="ic">⭐</div><strong>Construa sua reputação</strong></div>
+  </div>
+
+  <div id="setupWarning" class="status-msg setup">
+    ⚠️ O banco de dados ainda não foi conectado. Veja as instruções no código-fonte (comentário no topo do arquivo) para ativar o cadastro.
+  </div>
+  <div id="statusSuccess" class="status-msg success">
+    ✅ Cadastro enviado com sucesso! Em breve nossa equipe entrará em contato para validar seus dados.
+  </div>
+  <div id="statusError" class="status-msg error">
+    ❌ Não foi possível enviar seu cadastro. Verifique os dados e tente novamente.
+  </div>
+
+  <form class="cadastro-form" id="formCadastro">
+
+    <div class="form-section-title">Dados pessoais</div>
+    <div class="form-row">
+      <div class="field">
+        <label for="nome">Nome completo *</label>
+        <input id="nome" type="text" placeholder="Seu nome completo" required>
+      </div>
+      <div class="field">
+        <label for="cpf">CPF/CNPJ *</label>
+        <input id="cpf" type="text" placeholder="000.000.000-00" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label for="whatsapp">WhatsApp *</label>
+        <input id="whatsapp" type="tel" placeholder="(48) 99999-9999" required>
+      </div>
+      <div class="field">
+        <label for="email">E-mail *</label>
+        <input id="email" type="email" placeholder="seuemail@exemplo.com" required>
+      </div>
+    </div>
+
+    <div class="form-section-title">Localização</div>
+    <div class="form-row">
+      <div class="field">
+        <label for="cidade">Cidade *</label>
+        <input id="cidade" type="text" placeholder="Florianópolis" required>
+      </div>
+      <div class="field">
+        <label for="bairro">Bairro / Região *</label>
+        <input id="bairro" type="text" placeholder="Centro, Norte da Ilha..." required>
+      </div>
+    </div>
+
+    <div class="form-section-title">Serviços que você presta</div>
+    <div class="field full">
+      <div class="checkbox-grid" id="servicosGrid">
+        <label class="checkbox-item"><input type="checkbox" value="Limpeza residencial"> Limpeza residencial</label>
+        <label class="checkbox-item"><input type="checkbox" value="Limpeza comercial"> Limpeza comercial</label>
+        <label class="checkbox-item"><input type="checkbox" value="Limpeza pós-obra"> Limpeza pós-obra</label>
+        <label class="checkbox-item"><input type="checkbox" value="Vidros e fachadas"> Vidros e fachadas</label>
+        <label class="checkbox-item"><input type="checkbox" value="Limpeza profunda"> Limpeza profunda</label>
+        <label class="checkbox-item"><input type="checkbox" value="Organização"> Organização de ambientes</label>
+      </div>
+    </div>
+
+    <div class="form-section-title">Experiência</div>
+    <div class="form-row">
+      <div class="field">
+        <label for="experiencia">Tempo de experiência *</label>
+        <select id="experiencia" required>
+          <option value="">Selecione</option>
+          <option>Menos de 1 ano</option>
+          <option>1 a 3 anos</option>
+          <option>3 a 5 anos</option>
+          <option>Mais de 5 anos</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="disponibilidade">Disponibilidade *</label>
+        <select id="disponibilidade" required>
+          <option value="">Selecione</option>
+          <option>Período integral</option>
+          <option>Meio período</option>
+          <option>Fins de semana</option>
+          <option>Sob demanda</option>
+        </select>
+      </div>
+    </div>
+    <div class="field full" style="margin-bottom:16px;">
+      <label for="sobre">Conte um pouco sobre sua experiência</label>
+      <textarea id="sobre" placeholder="Ex: trabalho com limpeza há 4 anos, atendo residências e clínicas..."></textarea>
+    </div>
+
+
+    <div class="form-section-title">Documento (opcional)</div>
+    <div class="field full">
+      <label class="upload-box" for="documento" id="uploadBox">
+        <div class="upload-icon">📄</div>
+        <div class="upload-text">
+          <strong id="uploadLabel">Enviar foto de documento ou comprovante</strong>
+          <span>Ajuda a agilizar sua aprovação na rede</span>
+        </div>
+      </label>
+      <input id="documento" type="file" accept="image/*" style="display:none;" onchange="atualizarNomeArquivo(this)">
+    </div>
+
+    <button class="submit-btn" type="submit" id="submitBtn">Enviar cadastro →</button>
+    <p class="form-note">Seus dados são usados apenas para conectar você a pedidos de limpeza na sua região.</p>
+  </form>
+</div>
+
+<footer>© 2026 Sisters Who Clean — Cadastro de profissionais</footer>
+
+<script>
+  // inicializa o cliente Supabase apenas se as chaves já foram preenchidas
+  if (SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 20) {
+    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    document.getElementById('setupWarning').style.display = 'none';
+  }
+
+  function atualizarNomeArquivo(input){
+    const label = document.getElementById('uploadLabel');
+    if(input.files && input.files[0]){
+      label.textContent = "Arquivo selecionado: " + input.files[0].name;
+    }
+  }
+
+  // marca visualmente os checkboxes selecionados
+  document.querySelectorAll('#servicosGrid .checkbox-item').forEach(item=>{
+    const input = item.querySelector('input');
+    input.addEventListener('change', ()=> item.classList.toggle('checked', input.checked));
+  });
+
+  document.getElementById('formCadastro').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    document.getElementById('statusSuccess').style.display = 'none';
+    document.getElementById('statusError').style.display = 'none';
+
+    if(!supabaseClient){
+      document.getElementById('setupWarning').style.display = 'block';
+      document.getElementById('setupWarning').scrollIntoView({behavior:'smooth'});
+      return;
+    }
+
+    const servicos = Array.from(document.querySelectorAll('#servicosGrid input:checked')).map(i=>i.value);
+
+
+    const foto = document.getElementById('fotoPerfil').files[0];
+
+let fotoUrl = null;
+
+if (foto) {
+    const nomeArquivo = `${Date.now()}-${foto.name}`;
+
+    const { error: uploadError } = await supabaseClient
+        .storage
+        .from('fotos-profissionais')
+        .upload(nomeArquivo, foto);
+
+    if (uploadError) {
+        console.error(uploadError);
+        alert('Erro ao enviar foto.');
+        return;
+    }
+
+    const { data } = supabaseClient
+        .storage
+        .from('fotos-profissionais')
+        .getPublicUrl(nomeArquivo);
+
+    fotoUrl = data.publicUrl;
+}
+    
+    const dados = {
+      nome_completo: document.getElementById('nome').value,
+      cpf_cnpj: document.getElementById('cpf').value,
+      whatsapp: document.getElementById('whatsapp').value,
+      email: document.getElementById('email').value,
+      cidade: document.getElementById('cidade').value,
+      bairro: document.getElementById('bairro').value,
+      servicos_oferecidos: servicos,
+      experiencia: document.getElementById('experiencia').value,
+      disponibilidade: document.getElementById('disponibilidade').value,
+      sobre: document.getElementById('sobre').value,
+      status: 'pendente'
+    };
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = "Enviando...";
+
+    const { error } = await supabaseClient.from('profissionais').insert([dados]);
+
+    btn.disabled = false;
+    btn.textContent = "Enviar cadastro →";
+
+    if(error){
+      console.error(error);
+      document.getElementById('statusError').style.display = 'block';
+      document.getElementById('statusError').scrollIntoView({behavior:'smooth'});
+    } else {
+      document.getElementById('formCadastro').reset();
+      document.getElementById('statusSuccess').style.display = 'block';
+      document.getElementById('statusSuccess').scrollIntoView({behavior:'smooth'});
+    }
+  });
+</script>
+
+</body>
+</html>

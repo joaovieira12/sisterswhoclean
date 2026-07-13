@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meu Painel | Sisters Who Clean</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://hxaeoluhpxamvcaxwjaz.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_gYq1GzSKyuCoLg0bN5qqew_dBx91xoi";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+<style>
+  :root{
+    --navy:#13294B;--ink:#13294B;--ink-soft:#5B6B85;--bg:#F5F8FC;--bg-w:#fff;
+    --primary:#1E88E5;--primary-dark:#1565C0;--accent:#FFB020;--accent-2:#36C2A4;
+    --danger:#E5484D;--line:#E7ECF3;--radius:18px;
+    --shadow-sm:0 4px 14px rgba(19,41,75,.07);--shadow-md:0 14px 34px rgba(19,41,75,.12);
+    --shadow-lg:0 28px 60px rgba(19,41,75,.16);
+  }
+  *{box-sizing:border-box;} body{margin:0;font-family:'Inter',sans-serif;color:var(--ink);background:var(--bg);}
+  h1,h2,h3{font-family:'Poppins',sans-serif;} a{color:inherit;text-decoration:none;}
+
+  /* LOGIN */
+  #loginGate{position:fixed;inset:0;background:linear-gradient(150deg,var(--navy),#1E88E5);display:flex;align-items:center;justify-content:center;z-index:100;}
+  .login-box{background:#fff;border-radius:24px;padding:42px 36px;width:100%;max-width:380px;box-shadow:var(--shadow-lg);text-align:center;}
+  .login-logo{font-family:'Poppins';font-weight:800;font-size:1.1rem;color:var(--navy);margin-bottom:4px;}
+  .login-logo span{color:var(--primary);}
+  .login-box h2{font-size:1.35rem;color:var(--navy);margin:12px 0 6px;}
+  .login-box p{color:var(--ink-soft);font-size:.88rem;margin:0 0 26px;}
+  .login-field{margin-bottom:14px;text-align:left;}
+  .login-field label{font-size:.8rem;font-weight:700;color:var(--navy);display:block;margin-bottom:5px;}
+  .login-field input{width:100%;border:1.5px solid var(--line);border-radius:13px;padding:13px 15px;font-family:'Inter';font-size:.92rem;outline:none;background:#F5F8FC;transition:border-color .2s;}
+  .login-field input:focus{border-color:var(--primary);background:#fff;}
+  .login-btn{width:100%;background:var(--primary);color:#fff;border:none;border-radius:999px;padding:14px;font-weight:800;font-size:.95rem;cursor:pointer;transition:.2s;margin-top:6px;}
+  .login-btn:hover{background:var(--primary-dark);}
+  .login-btn:disabled{opacity:.5;}
+  .login-error{color:var(--danger);font-size:.83rem;margin-top:12px;display:none;}
+
+  /* PAINEL */
+  #painelContent{display:none;}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:16px 0;}
+  .nav{display:flex;align-items:center;justify-content:space-between;max-width:1100px;margin:0 auto;padding:0 24px;}
+  .prof-header-info{display:flex;align-items:center;gap:12px;}
+  .prof-mini-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--navy));color:#fff;font-family:'Poppins';font-weight:800;font-size:.95rem;display:flex;align-items:center;justify-content:center;}
+  .prof-header-name{font-weight:700;color:var(--navy);font-size:.95rem;}
+  .prof-header-sub{font-size:.78rem;color:var(--ink-soft);}
+  .logout-btn{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:9px 18px;font-size:.83rem;font-weight:600;cursor:pointer;color:var(--ink-soft);transition:.2s;}
+  .logout-btn:hover{border-color:var(--danger);color:var(--danger);}
+
+  .container{max-width:1100px;margin:0 auto;padding:32px 24px 60px;}
+
+  /* Tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:26px;background:var(--bg-w);border:1px solid var(--line);border-radius:14px;padding:5px;width:fit-content;}
+  .tab{padding:10px 20px;border-radius:10px;font-weight:600;font-size:.88rem;cursor:pointer;color:var(--ink-soft);transition:.2s;border:none;background:none;}
+  .tab.active{background:var(--primary);color:#fff;}
+
+  /* Stats */
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px;}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow-sm);}
+  .stat .num{font-size:1.6rem;font-weight:800;color:var(--navy);font-family:'Poppins';}
+  .stat .num.star{color:var(--primary);}
+  .stat .lbl{font-size:.8rem;color:var(--ink-soft);font-weight:600;}
+
+  /* Pedidos */
+  .pedido-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin-bottom:14px;box-shadow:var(--shadow-sm);transition:.2s;}
+  .pedido-card:hover{box-shadow:var(--shadow-md);}
+  .pedido-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .pedido-nome{font-weight:700;color:var(--navy);font-size:1rem;}
+  .pedido-tipo{color:var(--ink-soft);font-size:.87rem;margin-top:3px;}
+  .badge{display:inline-block;padding:5px 12px;border-radius:999px;font-size:.74rem;font-weight:700;}
+  .badge.aberto{background:#E3F1FE;color:var(--primary-dark);}
+  .badge.em_andamento{background:#FFF3DC;color:#A66A00;}
+  .badge.concluido{background:#E3FBF4;color:#0E7A5F;}
+  .pedido-info{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:.85rem;color:var(--ink-soft);}
+  .pedido-info span{display:flex;align-items:center;gap:5px;}
+  .pedido-desc{margin-top:10px;font-size:.88rem;color:var(--ink-soft);line-height:1.5;}
+  .pedido-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .btn-sm{padding:9px 18px;border-radius:999px;font-size:.82rem;font-weight:700;cursor:pointer;border:none;transition:.2s;}
+  .btn-wpp{background:#25D366;color:#fff;}
+  .btn-wpp:hover{background:#1aab52;}
+  .btn-status{background:var(--bg);border:1.5px solid var(--line);color:var(--ink-soft);cursor:pointer;padding:9px 14px;border-radius:999px;font-size:.82rem;font-weight:600;transition:.2s;}
+  .btn-status:hover{border-color:var(--primary);color:var(--primary);}
+  .btn-avaliar{background:var(--primary);color:#fff;}
+  .btn-avaliar:hover{background:var(--primary-dark);}
+
+  /* Avaliações */
+  .aval-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px 22px;margin-bottom:12px;box-shadow:var(--shadow-sm);}
+  .aval-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .aval-nome{font-weight:700;color:var(--navy);font-size:.92rem;}
+  .aval-stars{color:#1E88E5;font-size:1.1rem;letter-spacing:2px;}
+  .aval-data{font-size:.78rem;color:var(--ink-soft);margin-bottom:6px;}
+  .aval-comentario{font-size:.88rem;color:var(--ink-soft);line-height:1.5;}
+
+  .empty{text-align:center;padding:50px 20px;color:var(--ink-soft);}
+  .empty .ic{font-size:2rem;margin-bottom:10px;}
+  .loading{text-align:center;padding:40px;color:var(--ink-soft);}
+
+  @media(max-width:768px){.stats-row{grid-template-columns:1fr 1fr;}}
+  @media(max-width:480px){.stats-row{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginGate">
+  <div class="login-box">
+    <div class="login-logo">SISTERS WHO <span>CLEAN</span></div>
+    <h2>Área da profissional</h2>
+    <p>Entre com as credenciais criadas pelo administrador</p>
+    <div class="login-field">
+      <label>Usuário</label>
+      <input id="inputUser" type="text" placeholder="Seu usuário" onkeydown="if(event.key==='Enter')logar()">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input id="inputSenha" type="password" placeholder="Sua senha" onkeydown="if(event.key==='Enter')logar()">
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="logar()">Entrar →</button>
+    <div class="login-error" id="loginError">Usuário ou senha incorretos.</div>
+  </div>
+</div>
+
+<!-- PAINEL -->
+<div id="painelContent">
+  <header>
+    <div class="nav">
+      <div class="prof-header-info">
+        <div class="prof-mini-avatar" id="headerAvatar">?</div>
+        <div>
+          <div class="prof-header-name" id="headerNome">Profissional</div>
+          <div class="prof-header-sub" id="headerCidade">Sisters Who Clean</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="sair()">Sair</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="stats-row">
+      <div class="stat"><div class="num" id="statTotal">–</div><div class="lbl">Pedidos recebidos</div></div>
+      <div class="stat"><div class="num" id="statAbertos">–</div><div class="lbl">Em aberto</div></div>
+      <div class="stat"><div class="num" id="statConcluidos">–</div><div class="lbl">Concluídos</div></div>
+      <div class="stat"><div class="num star" id="statMedia">–</div><div class="lbl">Sua avaliação média ⭐</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="mudarAba('pedidos',this)">Meus pedidos</button>
+      <button class="tab" onclick="mudarAba('avaliacoes',this)">Minhas avaliações</button>
+    </div>
+
+    <div id="abaPedidos">
+      <div id="loadingPedidos" class="loading">Carregando pedidos...</div>
+      <div id="listaPedidos"></div>
+    </div>
+
+    <div id="abaAvaliacoes" style="display:none;">
+      <div id="loadingAval" class="loading">Carregando avaliações...</div>
+      <div id="listaAval"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let profLogada = null;
+
+  // Verifica sessão salva
+  const sessao = sessionStorage.getItem('swc_prof');
+  if(sessao){
+    profLogada = JSON.parse(sessao);
+    mostrarPainel();
+  }
+
+  async function logar(){
+    const user = document.getElementById('inputUser').value.trim();
+    const senha = document.getElementById('inputSenha').value;
+    if(!user || !senha) return;
+
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = 'Entrando...';
+
+    // Busca credencial no banco
+    const { data, error } = await sb
+      .from('credenciais_profissionais')
+      .select('profissional_id, senha')
+      .eq('username', user)
+      .single();
+
+    btn.disabled = false; btn.textContent = 'Entrar →';
+
+    if(error || !data || data.senha !== senha){
+      document.getElementById('loginError').style.display = 'block';
+      return;
+    }
+
+    // Busca dados do profissional
+    const { data: prof } = await sb
+      .from('profissionais')
+      .select('*')
+      .eq('id', data.profissional_id)
+      .single();
+
+    if(!prof){ document.getElementById('loginError').style.display = 'block'; return; }
+
+    profLogada = prof;
+    sessionStorage.setItem('swc_prof', JSON.stringify(prof));
+    mostrarPainel();
+  }
+
+  function mostrarPainel(){
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('painelContent').style.display = 'block';
+
+    const iniciais = profLogada.nome_completo.split(' ').slice(0,2).map(n=>n[0]).join('');
+    document.getElementById('headerAvatar').textContent = iniciais;
+    document.getElementById('headerNome').textContent = profLogada.nome_completo;
+    document.getElementById('headerCidade').textContent = profLogada.cidade + (profLogada.bairro ? ' · '+profLogada.bairro : '');
+    document.getElementById('statMedia').textContent = profLogada.avaliacao_media ? profLogada.avaliacao_media.toFixed(1)+'★' : '–';
+
+    carregarPedidos();
+  }
+
+  function sair(){
+    sessionStorage.removeItem('swc_prof');
+    location.reload();
+  }
+
+  function mudarAba(aba, btn){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('abaPedidos').style.display = aba==='pedidos' ? 'block' : 'none';
+    document.getElementById('abaAvaliacoes').style.display = aba==='avaliacoes' ? 'block' : 'none';
+    if(aba==='avaliacoes') carregarAvaliacoes();
+  }
+
+  async function carregarPedidos(){
+    const { data, error } = await sb
+      .from('pedidos_servico')
+      .select('*')
+      .eq('profissional_id', profLogada.id)
+      .order('criado_em', { ascending: false });
+
+    document.getElementById('loadingPedidos').style.display = 'none';
+
+    if(error){ document.getElementById('listaPedidos').innerHTML = '<p style="color:red">Erro ao carregar pedidos.</p>'; return; }
+
+    const lista = data || [];
+    document.getElementById('statTotal').textContent = lista.length;
+    document.getElementById('statAbertos').textContent = lista.filter(p=>p.status==='aberto').length;
+    document.getElementById('statConcluidos').textContent = lista.filter(p=>p.status==='concluido').length;
+
+    if(lista.length === 0){
+      document.getElementById('listaPedidos').innerHTML = `<div class="empty"><div class="ic">📋</div><strong>Nenhum pedido ainda</strong><p>Quando um cliente escolher você, os pedidos aparecerão aqui.</p></div>`;
+      return;
+    }
+
+    document.getElementById('listaPedidos').innerHTML = lista.map(p => {
+      const data = new Date(p.criado_em).toLocaleDateString('pt-BR');
+      const avalLink = `avaliacao.html?prof=${profLogada.id}&pedido=${p.id}`;
+      const wppLimpo = (p.whatsapp_cliente||'').replace(/\D/,'');
+      return `
+        <div class="pedido-card">
+          <div class="pedido-top">
+            <div>
+              <div class="pedido-nome">${p.nome_cliente || '–'}</div>
+              <div class="pedido-tipo">${p.tipo_servico || ''}</div>
+            </div>
+            <span class="badge ${p.status}">${traduzirStatus(p.status)}</span>
+          </div>
+          <div class="pedido-info">
+            <span>📅 ${data}</span>
+            ${p.cidade ? `<span>📍 ${p.cidade}</span>` : ''}
+            ${p.whatsapp_cliente ? `<span>📱 ${p.whatsapp_cliente}</span>` : ''}
+          </div>
+          ${p.descricao ? `<div class="pedido-desc">${p.descricao}</div>` : ''}
+          <div class="pedido-actions">
+            ${wppLimpo ? `<button class="btn-sm btn-wpp" onclick="window.open('https://wa.me/55${wppLimpo}','_blank')">💬 WhatsApp cliente</button>` : ''}
+            ${p.status !== 'concluido' ? `<button class="btn-status" onclick="atualizarStatus('${p.id}', this)">Marcar como concluído ✓</button>` : ''}
+            ${p.status === 'concluido' && !p.avaliado ? `<button class="btn-sm btn-avaliar" onclick="copiarLinkAvaliacao('${avalLink}')">📋 Copiar link de avaliação</button>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function traduzirStatus(s){ return {aberto:'Em aberto', em_andamento:'Em andamento', concluido:'Concluído'}[s] || s; }
+
+  async function atualizarStatus(id, btn){
+    btn.disabled = true; btn.textContent = 'Salvando...';
+    const { error } = await sb.from('pedidos_servico').update({status:'concluido'}).eq('id',id);
+    if(error){ btn.disabled = false; btn.textContent = 'Marcar como concluído ✓'; alert('Erro: '+error.message); return; }
+    carregarPedidos();
+  }
+
+  function copiarLinkAvaliacao(link){
+    const url = location.origin + '/' + link;
+    navigator.clipboard.writeText(url).then(()=> alert('Link copiado!\n\nEnvie para o cliente avaliar:\n'+url));
+  }
+
+  async function carregarAvaliacoes(){
+    document.getElementById('loadingAval').style.display = 'block';
+    document.getElementById('listaAval').innerHTML = '';
+
+    const { data, error } = await sb
+      .from('avaliacoes')
+      .select('*')
+      .eq('profissional_id', profLogada.id)
+      .order('criado_em', { ascending: false });
+
+    document.getElementById('loadingAval').style.display = 'none';
+    if(error || !data || data.length === 0){
+      document.getElementById('listaAval').innerHTML = `<div class="empty"><div class="ic">⭐</div><strong>Nenhuma avaliação ainda</strong><p>As avaliações dos seus clientes aparecerão aqui.</p></div>`;
+      return;
+    }
+
+    document.getElementById('listaAval').innerHTML = data.map(a => {
+      const estrelas = '★'.repeat(a.estrelas) + '☆'.repeat(5-a.estrelas);
+      const dataFmt = new Date(a.criado_em).toLocaleDateString('pt-BR');
+      return `
+        <div class="aval-card">
+          <div class="aval-top">
+            <div class="aval-nome">${a.nome_cliente}</div>
+            <div class="aval-stars">${estrelas}</div>
+          </div>
+          <div class="aval-data">${dataFmt}</div>
+          ${a.comentario ? `<div class="aval-comentario">"${a.comentario}"</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+</script>
+</body>
+</html>

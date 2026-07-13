@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Admin | Sisters Who Clean</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- ====================================================================
+  CONEXÃO COM O BANCO (use as mesmas chaves do cadastro-profissional.html)
+==================================================================== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://hxaeoluhpxamvcaxwjaz.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_gYq1GzSKyuCoLg0bN5qqew_dBx91xoi";
+
+  let supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+
+<style>
+  :root{
+    --navy:#13294B;--ink:#13294B;--ink-soft:#5B6B85;--bg:#FFFFFF;--bg-soft:#F5F8FC;
+    --primary:#1E88E5;--primary-dark:#1565C0;--accent:#FFB020;--accent-2:#36C2A4;--danger:#E5484D;
+    --line:#E7ECF3;--radius:18px;
+    --shadow-sm:0 4px 14px rgba(19,41,75,.07);
+    --shadow-md:0 14px 34px rgba(19,41,75,.12);
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',sans-serif;color:var(--ink);background:var(--bg-soft);line-height:1.5;}
+  h1,h2,.brand{font-family:'Poppins',sans-serif;}
+  a{color:inherit;text-decoration:none;}
+ 
+  /* ---------- LOGIN GATE ---------- */
+  #loginGate{
+    position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:100;
+  }
+  .login-box{
+    background:#fff;border-radius:22px;padding:40px;width:100%;max-width:360px;box-shadow:var(--shadow-md);text-align:center;
+  }
+  .login-box .brand{font-weight:800;color:var(--navy);font-size:1.05rem;margin-bottom:6px;}
+  .login-box .brand span{color:var(--primary);}
+  .login-box p{color:var(--ink-soft);font-size:.88rem;margin:0 0 22px;}
+  .login-box input{
+    width:100%;border:1.5px solid var(--line);border-radius:13px;padding:13px 15px;font-size:.95rem;
+    margin-bottom:14px;outline:none;text-align:center;
+  }
+  .login-box input:focus{border-color:var(--primary);}
+  .login-box button{
+    width:100%;background:var(--primary);color:#fff;padding:13px;border:none;border-radius:999px;
+    font-weight:700;font-size:.92rem;cursor:pointer;transition:.2s;
+  }
+  .login-box button:hover{background:var(--primary-dark);}
+  .login-error{color:var(--danger);font-size:.82rem;margin-top:10px;display:none;}
+ 
+  /* ---------- LAYOUT ---------- */
+  #adminPanel{display:none;}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:16px 0;}
+  .nav{display:flex;align-items:center;justify-content:space-between;max-width:1180px;margin:0 auto;padding:0 24px;}
+  .brand{font-weight:800;color:var(--navy);font-size:1rem;}
+  .brand span{color:var(--primary);}
+  .header-actions{display:flex;align-items:center;gap:14px;}
+  .header-actions a{font-size:.85rem;font-weight:600;color:var(--ink-soft);}
+  .header-actions a:hover{color:var(--primary);}
+  .logout-btn{
+    background:var(--bg-soft);border:1px solid var(--line);padding:9px 16px;border-radius:999px;
+    font-size:.82rem;font-weight:600;cursor:pointer;color:var(--ink-soft);
+  }
+  .logout-btn:hover{color:var(--danger);border-color:var(--danger);}
+ 
+  .container{max-width:1180px;margin:0 auto;padding:36px 24px 60px;}
+  .page-title{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:28px;}
+  .page-title h1{font-size:1.6rem;color:var(--navy);margin:0;font-weight:800;}
+  .page-title p{color:var(--ink-soft);font-size:.9rem;margin:4px 0 0;}
+ 
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+  .stat-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow-sm);}
+  .stat-card .num{font-size:1.7rem;font-weight:800;color:var(--navy);font-family:'Poppins';}
+  .stat-card .label{font-size:.82rem;color:var(--ink-soft);font-weight:600;}
+ 
+  .toolbar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;align-items:center;}
+  .toolbar input{
+    flex:1;min-width:220px;border:1.5px solid var(--line);border-radius:12px;padding:11px 16px;font-size:.9rem;
+    outline:none;background:#fff;
+  }
+  .toolbar input:focus{border-color:var(--primary);}
+  .filter-chip{
+    border:1.5px solid var(--line);background:#fff;padding:10px 16px;border-radius:999px;font-size:.85rem;
+    font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.2s;
+  }
+  .filter-chip.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+  .refresh-btn{
+    border:1.5px solid var(--line);background:#fff;padding:10px 16px;border-radius:999px;font-size:.85rem;
+    font-weight:600;color:var(--ink-soft);cursor:pointer;display:flex;align-items:center;gap:6px;
+  }
+  .refresh-btn:hover{border-color:var(--primary);color:var(--primary);}
+ 
+  .table-wrap{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.88rem;}
+  thead{background:var(--bg-soft);}
+  th{text-align:left;padding:14px 18px;font-size:.76rem;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-soft);font-weight:700;}
+  td{padding:16px 18px;border-top:1px solid var(--line);vertical-align:top;}
+  tr:hover td{background:#FAFCFE;}
+  .cell-name{font-weight:700;color:var(--navy);}
+  .cell-sub{font-size:.78rem;color:var(--ink-soft);margin-top:2px;}
+  .badge{
+    display:inline-block;padding:5px 12px;border-radius:999px;font-size:.74rem;font-weight:700;
+  }
+  .badge.pendente{background:#FFF3DC;color:#A66A00;}
+  .badge.aprovado{background:#E3FBF4;color:#0E7A5F;}
+  .badge.bloqueado{background:#FCE8E8;color:#B3261E;}
+  .service-tag{
+    display:inline-block;background:#E3F1FE;color:var(--primary-dark);font-size:.74rem;font-weight:600;
+    padding:3px 9px;border-radius:999px;margin:2px 3px 2px 0;
+  }
+  .status-select{
+    border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.78rem;font-weight:600;
+    background:#fff;cursor:pointer;outline:none;
+  }
+  .whatsapp-link{color:var(--accent-2);font-weight:700;display:inline-flex;align-items:center;gap:4px;}
+  .remove-btn{
+    background:#fff;border:1.5px solid var(--line);border-radius:10px;width:36px;height:36px;
+    cursor:pointer;font-size:1rem;transition:.2s;display:flex;align-items:center;justify-content:center;
+  }
+  .remove-btn:hover{border-color:var(--danger);background:#FCE8E8;transform:scale(1.05);}
+
+  /* Modal de criar login */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:#fff;border-radius:22px;padding:36px;width:100%;max-width:420px;box-shadow:0 30px 60px rgba(0,0,0,.2);}
+  .modal h3{font-family:'Poppins';font-size:1.15rem;color:var(--navy);margin:0 0 6px;}
+  .modal p{color:var(--ink-soft);font-size:.88rem;margin:0 0 22px;}
+  .modal-field{margin-bottom:14px;}
+  .modal-field label{font-size:.8rem;font-weight:700;color:var(--navy);display:block;margin-bottom:5px;}
+  .modal-field input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-family:'Inter';font-size:.9rem;outline:none;background:#F5F8FC;transition:.2s;}
+  .modal-field input:focus{border-color:var(--primary);background:#fff;}
+  .modal-actions{display:flex;gap:10px;margin-top:20px;}
+  .btn-modal-cancel{flex:1;background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:12px;font-weight:600;cursor:pointer;color:var(--ink-soft);}
+  .btn-modal-save{flex:2;background:var(--primary);border:none;border-radius:999px;padding:12px;font-weight:700;color:#fff;cursor:pointer;transition:.2s;}
+  .btn-modal-save:hover{background:var(--primary-dark);}
+  .btn-modal-save:disabled{opacity:.5;}
+  .modal-msg{font-size:.82rem;font-weight:600;padding:10px 12px;border-radius:10px;margin-top:12px;display:none;}
+  .modal-msg.ok{background:#E3FBF4;color:#0E7A5F;}
+  .modal-msg.err{background:#FCE8E8;color:#B3261E;}
+
+  /* Botão criar login na tabela */
+  .btn-login{
+    background:var(--bg-soft);border:1.5px solid var(--line);border-radius:10px;padding:6px 12px;
+    font-size:.76rem;font-weight:700;cursor:pointer;color:var(--ink-soft);transition:.2s;white-space:nowrap;
+  }
+  .btn-login:hover{border-color:var(--primary);color:var(--primary);}
+  .btn-login.tem-login{border-color:var(--accent-2);color:var(--accent-2);}
+
+  /* Botão copiar link avaliação */
+  .btn-aval{
+    background:var(--bg-soft);border:1.5px solid var(--line);border-radius:10px;padding:6px 12px;
+    font-size:.76rem;font-weight:700;cursor:pointer;color:var(--ink-soft);transition:.2s;white-space:nowrap;
+  }
+  .btn-aval:hover{border-color:#1E88E5;color:#1E88E5;}
+ 
+  .empty-state{text-align:center;padding:60px 20px;color:var(--ink-soft);}
+  .empty-state .ic{font-size:2.4rem;margin-bottom:10px;}
+ 
+  .loading{text-align:center;padding:50px;color:var(--ink-soft);font-size:.9rem;}
+ 
+  @media (max-width:900px){
+    .stats-row{grid-template-columns:1fr 1fr;}
+    .table-wrap{overflow-x:auto;}
+    table{min-width:760px;}
+  }
+</style>
+</head>
+<body>
+ 
+<!-- ============ LOGIN ============ -->
+<div id="loginGate">
+  <div class="login-box">
+    <div class="brand">SISTERS WHO <span>CLEAN</span></div>
+    <p>Painel administrativo — acesso restrito</p>
+    <input type="email" id="emailInput" placeholder="E-mail" autocomplete="username" onkeydown="if(event.key==='Enter') tentarLogin()">
+    <input type="password" id="passwordInput" placeholder="Digite a senha" autocomplete="current-password" onkeydown="if(event.key==='Enter') tentarLogin()">
+    <button onclick="tentarLogin()" id="loginBtn">Entrar →</button>
+    <div class="login-error" id="loginError">E-mail ou senha incorretos.</div>
+  </div>
+</div>
+ 
+<!-- ============ PAINEL ============ -->
+<div id="adminPanel">
+  <header>
+    <div class="nav">
+      <div class="brand">SISTERS WHO <span>CLEAN</span> · Admin</div>
+      <div class="header-actions">
+        <a href="index.html">Ver site</a>
+        <button class="logout-btn" onclick="sair()">Sair</button>
+      </div>
+    </div>
+  </header>
+ 
+  <div class="container">
+    <div class="page-title">
+      <div>
+        <h1>Profissionais cadastrados</h1>
+        <p>Acompanhe e gerencie quem se cadastrou para fazer parte da rede.</p>
+      </div>
+    </div>
+ 
+    <div class="stats-row">
+      <div class="stat-card"><div class="num" id="statTotal">–</div><div class="label">Total de cadastros</div></div>
+      <div class="stat-card"><div class="num" id="statPendente">–</div><div class="label">Pendentes</div></div>
+      <div class="stat-card"><div class="num" id="statAprovado">–</div><div class="label">Aprovados</div></div>
+      <div class="stat-card"><div class="num" id="statBloqueado">–</div><div class="label">Bloqueados</div></div>
+    </div>
+ 
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="Buscar por nome, cidade ou WhatsApp..." oninput="renderizar()">
+      <button class="filter-chip active" data-filter="todos" onclick="filtrar('todos', this)">Todos</button>
+      <button class="filter-chip" data-filter="pendente" onclick="filtrar('pendente', this)">Pendentes</button>
+      <button class="filter-chip" data-filter="aprovado" onclick="filtrar('aprovado', this)">Aprovados</button>
+      <button class="filter-chip" data-filter="bloqueado" onclick="filtrar('bloqueado', this)">Bloqueados</button>
+      <button class="refresh-btn" onclick="carregarDados()">↻ Atualizar</button>
+    </div>
+ 
+    <div class="table-wrap">
+      <div id="loadingState" class="loading">Carregando cadastros...</div>
+      <table id="dataTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>Profissional</th>
+            <th>Contato</th>
+            <th>Localização</th>
+            <th>Serviços</th>
+            <th>Experiência</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div id="emptyState" class="empty-state" style="display:none;">
+        <div class="ic">📋</div>
+        <strong>Nenhum profissional cadastrado ainda</strong>
+        <p>Assim que alguém se cadastrar pelo site, vai aparecer aqui.</p>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+<script>
+  let todosOsDados = [];
+  let filtroAtual = 'todos';
+ 
+  // ---------- LOGIN (Supabase Auth) ----------
+  async function tentarLogin(){
+    const email = document.getElementById('emailInput').value.trim();
+    const senha = document.getElementById('passwordInput').value;
+    const btn = document.getElementById('loginBtn');
+    const erro = document.getElementById('loginError');
+
+    erro.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: senha
+    });
+
+    btn.disabled = false;
+    btn.textContent = 'Entrar →';
+
+    if(error){
+      erro.textContent = 'E-mail ou senha incorretos.';
+      erro.style.display = 'block';
+      return;
+    }
+
+    mostrarPainel();
+  }
+
+  async function sair(){
+    await supabaseClient.auth.signOut();
+    location.reload();
+  }
+
+  function mostrarPainel(){
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    carregarDados();
+  }
+
+  // Ao carregar a página, verifica se já existe uma sessão válida
+  async function verificarSessao(){
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if(session){
+      mostrarPainel();
+    }
+  }
+  verificarSessao();
+
+ 
+  async function carregarDados(){
+    document.getElementById('loadingState').style.display = 'block';
+    document.getElementById('dataTable').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+ 
+    const { data, error } = await supabaseClient
+      .from('profissionais')
+      .select('*')
+      .order('criado_em', { ascending: false });
+ 
+    document.getElementById('loadingState').style.display = 'none';
+ 
+    if(error){
+      document.getElementById('loadingState').style.display = 'block';
+      document.getElementById('loadingState').textContent = "Erro ao carregar dados: " + error.message;
+      console.error(error);
+      return;
+    }
+ 
+    todosOsDados = data || [];
+    atualizarStats();
+    renderizar();
+  }
+ 
+  function atualizarStats(){
+    document.getElementById('statTotal').textContent = todosOsDados.length;
+    document.getElementById('statPendente').textContent = todosOsDados.filter(p=>p.status==='pendente').length;
+    document.getElementById('statAprovado').textContent = todosOsDados.filter(p=>p.status==='aprovado').length;
+    document.getElementById('statBloqueado').textContent = todosOsDados.filter(p=>p.status==='bloqueado').length;
+  }
+ 
+  function filtrar(status, btn){
+    filtroAtual = status;
+    document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+    btn.classList.add('active');
+    renderizar();
+  }
+ 
+  function renderizar(){
+    const busca = document.getElementById('searchInput').value.toLowerCase();
+    let lista = todosOsDados;
+ 
+    if(filtroAtual !== 'todos'){
+      lista = lista.filter(p => p.status === filtroAtual);
+    }
+    if(busca){
+      lista = lista.filter(p =>
+        (p.nome_completo||'').toLowerCase().includes(busca) ||
+        (p.cidade||'').toLowerCase().includes(busca) ||
+        (p.whatsapp||'').toLowerCase().includes(busca)
+      );
+    }
+ 
+    const tbody = document.getElementById('tableBody');
+    const table = document.getElementById('dataTable');
+    const empty = document.getElementById('emptyState');
+ 
+    if(lista.length === 0){
+      table.style.display = 'none';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    table.style.display = 'table';
+ 
+    tbody.innerHTML = lista.map(p => {
+      const servicos = (p.servicos_oferecidos || []).map(s => `<span class="service-tag">${s}</span>`).join('');
+      const whatsLimpo = (p.whatsapp || '').replace(/\D/g,'');
+      return `
+        <tr>
+          <td>
+            <div class="cell-name">${p.nome_completo || '—'}</div>
+            <div class="cell-sub">${p.cpf_cnpj || ''}</div>
+          </td>
+          <td>
+            <a class="whatsapp-link" href="https://wa.me/55${whatsLimpo}" target="_blank">💬 ${p.whatsapp || '—'}</a>
+            <div class="cell-sub">${p.email || ''}</div>
+          </td>
+          <td>
+            ${p.cidade || '—'}
+            <div class="cell-sub">${p.bairro || ''}</div>
+          </td>
+          <td>${servicos || '<span class="cell-sub">Não informado</span>'}</td>
+          <td>
+            ${p.experiencia || '—'}
+            <div class="cell-sub">${p.disponibilidade || ''}</div>
+          </td>
+          <td>
+            <select class="status-select" onchange="mudarStatus('${p.id}', this.value)">
+              <option value="pendente" ${p.status==='pendente'?'selected':''}>Pendente</option>
+              <option value="aprovado" ${p.status==='aprovado'?'selected':''}>Aprovado</option>
+              <option value="bloqueado" ${p.status==='bloqueado'?'selected':''}>Bloqueado</option>
+            </select>
+          </td>
+          <td>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <button class="btn-login ${credenciaisExistentes[p.id]?'tem-login':''}" onclick="abrirModalLogin('${p.id}','${(p.nome_completo||'').replace(/'/g,"\\'")}')">
+                ${credenciaisExistentes[p.id] ? '🔑 Editar login' : '+ Criar login'}
+              </button>
+              <button class="btn-aval" onclick="copiarLinkAvaliacao('${p.id}')">⭐ Link avaliação</button>
+              <button class="remove-btn" onclick="removerProfissional('${p.id}', '${(p.nome_completo||'').replace(/'/g,"\\'")}')">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+ 
+  async function mudarStatus(id, novoStatus){
+    const { error } = await supabaseClient
+      .from('profissionais')
+      .update({ status: novoStatus })
+      .eq('id', id);
+    if(error){
+      alert('Erro ao atualizar status: ' + error.message);
+      return;
+    }
+    const item = todosOsDados.find(p => p.id === id);
+    if(item) item.status = novoStatus;
+    atualizarStats();
+  }
+ 
+  async function removerProfissional(id, nome){
+    const confirmado = confirm(`Tem certeza que deseja remover "${nome}" da lista de profissionais?\n\nEssa ação não pode ser desfeita.`);
+    if(!confirmado) return;
+ 
+    const { error } = await supabaseClient
+      .from('profissionais')
+      .delete()
+      .eq('id', id);
+ 
+    if(error){
+      alert('Erro ao remover: ' + error.message);
+      console.error(error);
+      return;
+    }
+ 
+    todosOsDados = todosOsDados.filter(p => p.id !== id);
+    atualizarStats();
+    renderizar();
+  }
+
+  // ---- CREDENCIAIS ----
+  let profParaLogin = null;
+  let credenciaisExistentes = {};
+
+  async function carregarCredenciais(){
+    const { data } = await supabaseClient.from('credenciais_profissionais').select('profissional_id, username');
+    if(data) data.forEach(c => credenciaisExistentes[c.profissional_id] = c.username);
+  }
+
+  function abrirModalLogin(id, nome){
+    profParaLogin = id;
+    document.getElementById('modalProfNome').textContent = 'Profissional: ' + nome;
+    document.getElementById('modalUser').value = credenciaisExistentes[id] || '';
+    document.getElementById('modalSenha').value = '';
+    document.getElementById('modalMsg').style.display = 'none';
+    document.getElementById('modalLogin').classList.add('open');
+  }
+
+  function fecharModal(){
+    document.getElementById('modalLogin').classList.remove('open');
+    profParaLogin = null;
+  }
+
+  async function salvarLogin(){
+    const user = document.getElementById('modalUser').value.trim();
+    const senha = document.getElementById('modalSenha').value.trim();
+    const msg = document.getElementById('modalMsg');
+    msg.style.display = 'none';
+
+    if(!user || senha.length < 6){
+      msg.textContent = 'Preencha o usuário e uma senha com pelo menos 6 caracteres.';
+      msg.className = 'modal-msg err'; msg.style.display = 'block'; return;
+    }
+
+    const btn = document.getElementById('btnSalvarLogin');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+
+    // Upsert: cria ou atualiza a credencial
+    const { error } = await supabaseClient.from('credenciais_profissionais').upsert([{
+      profissional_id: profParaLogin,
+      username: user,
+      senha: senha
+    }], { onConflict: 'profissional_id' });
+
+    btn.disabled = false; btn.textContent = 'Salvar acesso →';
+
+    if(error){
+      msg.textContent = 'Erro: ' + error.message;
+      msg.className = 'modal-msg err'; msg.style.display = 'block'; return;
+    }
+
+    credenciaisExistentes[profParaLogin] = user;
+    msg.textContent = '✅ Acesso salvo com sucesso!';
+    msg.className = 'modal-msg ok'; msg.style.display = 'block';
+    setTimeout(()=>{ fecharModal(); renderizar(); }, 1200);
+  }
+
+  function copiarLinkAvaliacao(id){
+    const base = location.href.replace('admin.html','');
+    const link = base + 'avaliacao.html?prof=' + id;
+    navigator.clipboard.writeText(link).then(()=> alert('Link de avaliação copiado!\n\nEnvie para o cliente:\n' + link));
+  }
+
+  // Fechar modal clicando fora
+  document.getElementById('modalLogin').addEventListener('click', function(e){
+    if(e.target === this) fecharModal();
+  });
+
+  // Carregar credenciais ao iniciar
+  const _origIniciar = iniciar;
+  iniciar = async function(){
+    _origIniciar();
+    await carregarCredenciais();
+  };
+</script>
+
+<div class="modal-overlay" id="modalLogin">
+  <div class="modal">
+    <h3>Criar acesso para profissional</h3>
+    <p id="modalProfNome">Definir usuário e senha.</p>
+    <div class="modal-field">
+      <label>Usuário *</label>
+      <input id="modalUser" type="text" placeholder="Ex: maria.silva">
+    </div>
+    <div class="modal-field">
+      <label>Senha *</label>
+      <input id="modalSenha" type="text" placeholder="Mínimo 6 caracteres">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-modal-save" id="btnSalvarLogin" onclick="salvarLogin()">Salvar acesso →</button>
+    </div>
+    <div class="modal-msg" id="modalMsg"></div>
+  </div>
+</div>
+
+</body>
+</html>
+ 

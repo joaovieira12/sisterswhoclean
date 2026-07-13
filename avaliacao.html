@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avalie o serviço | Sisters Who Clean</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://hxaeoluhpxamvcaxwjaz.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_gYq1GzSKyuCoLg0bN5qqew_dBx91xoi";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+<style>
+  :root{
+    --navy:#13294B;--ink:#13294B;--ink-soft:#5B6B85;--bg:#F5F8FC;
+    --primary:#1E88E5;--primary-dark:#1565C0;--line:#E7ECF3;
+    --shadow-lg:0 28px 60px rgba(19,41,75,.16);
+  }
+  *{box-sizing:border-box;} body{margin:0;font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;}
+  h1,h2{font-family:'Poppins',sans-serif;}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:16px 24px;text-align:center;}
+  .brand{font-family:'Poppins';font-weight:800;color:var(--navy);font-size:1rem;}
+  .brand span{color:var(--primary);}
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 20px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:26px;padding:44px 40px;max-width:500px;width:100%;box-shadow:var(--shadow-lg);text-align:center;}
+  .prof-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--navy));color:#fff;font-family:'Poppins';font-weight:800;font-size:1.6rem;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+  .prof-nome{font-size:1.3rem;font-weight:800;color:var(--navy);margin:0 0 4px;}
+  .prof-servico{color:var(--ink-soft);font-size:.9rem;margin:0 0 28px;}
+  .pergunta{font-size:1.05rem;font-weight:700;color:var(--navy);margin:0 0 20px;}
+
+  /* Estrelas */
+  .star-row{display:flex;justify-content:center;gap:10px;margin-bottom:10px;}
+  .star{font-size:2.8rem;cursor:pointer;color:#D1DDE8;transition:color .15s, transform .15s;line-height:1;}
+  .star:hover,.star.on{color:#1E88E5;transform:scale(1.15);}
+  .star-label{font-size:.85rem;color:var(--ink-soft);margin-bottom:22px;min-height:20px;}
+
+  textarea{
+    width:100%;border:1.5px solid var(--line);border-radius:14px;padding:13px 15px;font-family:'Inter';
+    font-size:.93rem;resize:vertical;min-height:100px;outline:none;transition:border-color .2s;
+    background:#F5F8FC;color:var(--ink);
+  }
+  textarea:focus{border-color:var(--primary);background:#fff;}
+  .input-label{text-align:left;font-size:.81rem;font-weight:700;color:var(--navy);display:block;margin-bottom:6px;}
+  .nome-input{
+    width:100%;border:1.5px solid var(--line);border-radius:13px;padding:12px 14px;font-family:'Inter';
+    font-size:.92rem;outline:none;transition:border-color .2s;background:#F5F8FC;
+    margin-bottom:14px;
+  }
+  .nome-input:focus{border-color:var(--primary);background:#fff;}
+
+  .btn-enviar{
+    width:100%;background:var(--primary);color:#fff;border:none;border-radius:999px;padding:15px;
+    font-weight:800;font-size:.97rem;cursor:pointer;transition:.2s;margin-top:18px;
+  }
+  .btn-enviar:hover{background:var(--primary-dark);transform:translateY(-1px);}
+  .btn-enviar:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+  .msg-success{background:#E3FBF4;color:#0E7A5F;border:1px solid #B5EBDB;border-radius:14px;padding:16px;margin-top:18px;font-weight:600;display:none;}
+  .msg-error{background:#FCE8E8;color:#B3261E;border:1px solid #F5C2C0;border-radius:14px;padding:16px;margin-top:18px;font-weight:600;display:none;}
+  .loading-state{padding:40px 20px;text-align:center;color:var(--ink-soft);}
+  .error-state{padding:40px 20px;text-align:center;}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">SISTERS WHO <span>CLEAN</span></div>
+</header>
+
+<main>
+  <div class="card" id="loadingCard">
+    <div class="loading-state">Carregando...</div>
+  </div>
+
+  <div class="card" id="mainCard" style="display:none;">
+    <div class="prof-avatar" id="profAvatar">?</div>
+    <div class="prof-nome" id="profNome">Profissional</div>
+    <div class="prof-servico" id="profServico">Serviço realizado</div>
+
+    <p class="pergunta">Como foi o atendimento?</p>
+
+    <div class="star-row" id="starRow">
+      <span class="star" data-v="1">★</span>
+      <span class="star" data-v="2">★</span>
+      <span class="star" data-v="3">★</span>
+      <span class="star" data-v="4">★</span>
+      <span class="star" data-v="5">★</span>
+    </div>
+    <div class="star-label" id="starLabel">Clique para avaliar</div>
+
+    <label class="input-label" for="nomeAvaliador">Seu nome *</label>
+    <input class="nome-input" id="nomeAvaliador" type="text" placeholder="Seu nome completo">
+
+    <label class="input-label" for="comentario">Deixe um comentário (opcional)</label>
+    <textarea id="comentario" placeholder="Conte como foi a experiência..."></textarea>
+
+    <button class="btn-enviar" id="btnEnviar" onclick="enviarAvaliacao()">Enviar avaliação →</button>
+    <div class="msg-success" id="msgSuccess">✅ Obrigada pela avaliação! Seu feedback é muito importante.</div>
+    <div class="msg-error" id="msgError">❌ Erro ao enviar. Tente novamente.</div>
+  </div>
+
+  <div class="card" id="errorCard" style="display:none;">
+    <div class="error-state">
+      <div style="font-size:2rem;margin-bottom:10px;">😕</div>
+      <strong>Link inválido ou expirado.</strong>
+      <p style="color:var(--ink-soft);">Verifique o link e tente novamente, ou entre em contato pelo WhatsApp.</p>
+    </div>
+  </div>
+</main>
+
+<script>
+  const labels = ['','Muito ruim','Ruim','Regular','Bom','Excelente!'];
+  let estrelaSelecionada = 0;
+  let profId = null;
+  let pedidoId = null;
+
+  // Pega parâmetros da URL: avaliacao.html?prof=UUID&pedido=UUID
+  const params = new URLSearchParams(location.search);
+  profId = params.get('prof');
+  pedidoId = params.get('pedido');
+
+  async function init(){
+    if(!profId){ mostrarErro(); return; }
+
+    const { data, error } = await sb
+      .from('profissionais')
+      .select('id, nome_completo, cidade, servicos_oferecidos')
+      .eq('id', profId)
+      .single();
+
+    document.getElementById('loadingCard').style.display = 'none';
+
+    if(error || !data){ mostrarErro(); return; }
+
+    const iniciais = data.nome_completo.split(' ').slice(0,2).map(n=>n[0]).join('');
+    document.getElementById('profAvatar').textContent = iniciais;
+    document.getElementById('profNome').textContent = data.nome_completo;
+    document.getElementById('profServico').textContent = `📍 ${data.cidade}`;
+    document.getElementById('mainCard').style.display = 'block';
+  }
+
+  function mostrarErro(){
+    document.getElementById('loadingCard').style.display = 'none';
+    document.getElementById('errorCard').style.display = 'block';
+  }
+
+  // Estrelas
+  const stars = document.querySelectorAll('.star');
+  stars.forEach(s => {
+    s.addEventListener('mouseenter', () => iluminar(+s.dataset.v));
+    s.addEventListener('mouseleave', () => iluminar(estrelaSelecionada));
+    s.addEventListener('click', () => {
+      estrelaSelecionada = +s.dataset.v;
+      iluminar(estrelaSelecionada);
+      document.getElementById('starLabel').textContent = labels[estrelaSelecionada];
+    });
+  });
+  function iluminar(v){
+    stars.forEach(s => s.classList.toggle('on', +s.dataset.v <= v));
+  }
+
+  async function enviarAvaliacao(){
+    const nome = document.getElementById('nomeAvaliador').value.trim();
+    if(!nome){ alert('Por favor, informe seu nome.'); return; }
+    if(!estrelaSelecionada){ alert('Por favor, selecione uma nota com as estrelas.'); return; }
+
+    const btn = document.getElementById('btnEnviar');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+
+    const dados = {
+      profissional_id: profId,
+      pedido_id: pedidoId || null,
+      nome_cliente: nome,
+      estrelas: estrelaSelecionada,
+      comentario: document.getElementById('comentario').value.trim() || null
+    };
+
+    const { error } = await sb.from('avaliacoes').insert([dados]);
+
+    btn.disabled = false; btn.textContent = 'Enviar avaliação →';
+
+    if(error){
+      document.getElementById('msgError').style.display = 'block';
+      console.error(error); return;
+    }
+
+    document.getElementById('btnEnviar').style.display = 'none';
+    document.getElementById('msgSuccess').style.display = 'block';
+    document.getElementById('starRow').style.pointerEvents = 'none';
+  }
+
+  init();
+</script>
+</body>
+</html>
