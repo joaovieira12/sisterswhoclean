@@ -163,11 +163,48 @@
   .empty-state .ic{font-size:2.4rem;margin-bottom:10px;}
  
   .loading{text-align:center;padding:50px;color:var(--ink-soft);font-size:.9rem;}
+
+  /* ---------- ABAS ---------- */
+  .admin-tabs{display:flex;gap:4px;margin-bottom:26px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:5px;width:fit-content;}
+  .admin-tab{padding:10px 20px;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;color:var(--ink-soft);transition:.2s;border:none;background:none;display:flex;align-items:center;gap:8px;}
+  .admin-tab.active{background:var(--primary);color:#fff;}
+  .tab-alert{background:var(--danger);color:#fff;font-size:.7rem;font-weight:800;padding:2px 7px;border-radius:999px;}
+
+  .section-title{font-size:1.05rem;color:var(--navy);font-weight:800;margin:26px 0 12px;font-family:'Poppins';}
+
+  /* ---------- CARDS DE PEDIDO (admin) ---------- */
+  .pedido-admin-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:14px;box-shadow:var(--shadow-sm);}
+  .pa-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
+  .pa-nome{font-weight:700;color:var(--navy);font-size:1rem;}
+  .pa-sub{font-size:.82rem;color:var(--ink-soft);margin-top:2px;}
+  .pa-info{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-size:.85rem;color:var(--ink-soft);}
+  .pa-desc{font-size:.87rem;color:var(--ink-soft);line-height:1.5;margin-bottom:12px;}
+  .pa-approve-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:var(--bg-soft);border-radius:14px;padding:14px 16px;margin-top:10px;}
+  .pa-field{display:flex;flex-direction:column;gap:4px;}
+  .pa-field label{font-size:.74rem;font-weight:700;color:var(--navy);}
+  .pa-field input{border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;font-size:.88rem;width:130px;outline:none;background:#fff;}
+  .pa-field input:focus{border-color:var(--primary);}
+  .pa-preview{font-size:.82rem;color:var(--ink-soft);}
+  .pa-preview strong{color:var(--accent-2);}
+  .btn-aprovar{background:var(--accent-2);color:#fff;border:none;border-radius:999px;padding:10px 20px;font-weight:700;font-size:.85rem;cursor:pointer;transition:.2s;}
+  .btn-aprovar:hover{background:#2aa88c;}
+  .btn-aprovar:disabled{opacity:.5;}
+
+  /* ---------- MODAL EDITAR PROFISSIONAL ---------- */
+  .modal.modal-wide{max-width:560px;}
+  .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .modal-grid .full{grid-column:1/-1;}
+  .btn-edit{
+    background:var(--bg-soft);border:1.5px solid var(--line);border-radius:10px;padding:6px 12px;
+    font-size:.76rem;font-weight:700;cursor:pointer;color:var(--ink-soft);transition:.2s;white-space:nowrap;
+  }
+  .btn-edit:hover{border-color:var(--primary);color:var(--primary);}
  
   @media (max-width:900px){
     .stats-row{grid-template-columns:1fr 1fr;}
     .table-wrap{overflow-x:auto;}
     table{min-width:760px;}
+    .modal-grid{grid-template-columns:1fr;}
   }
 </style>
 </head>
@@ -198,50 +235,94 @@
   </header>
  
   <div class="container">
-    <div class="page-title">
-      <div>
-        <h1>Profissionais cadastrados</h1>
-        <p>Acompanhe e gerencie quem se cadastrou para fazer parte da rede.</p>
+    <div class="admin-tabs">
+      <button class="admin-tab active" id="tabBtnProf" onclick="mudarAbaAdmin('profissionais')">👩‍💼 Profissionais</button>
+      <button class="admin-tab" id="tabBtnPedidos" onclick="mudarAbaAdmin('pedidos')">📋 Pedidos <span class="tab-alert" id="alertPendentes" style="display:none;">0</span></button>
+    </div>
+    <p id="avisoPedidos" role="status" style="margin: 8px 0;"></p>
+
+    <!-- ================= ABA PROFISSIONAIS ================= -->
+    <div id="tabProfissionais">
+      <div class="page-title">
+        <div>
+          <h1>Profissionais cadastrados</h1>
+          <p>Acompanhe e gerencie quem se cadastrou para fazer parte da rede.</p>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="num" id="statTotal">–</div><div class="label">Total de cadastros</div></div>
+        <div class="stat-card"><div class="num" id="statPendente">–</div><div class="label">Pendentes</div></div>
+        <div class="stat-card"><div class="num" id="statAprovado">–</div><div class="label">Aprovados</div></div>
+        <div class="stat-card"><div class="num" id="statBloqueado">–</div><div class="label">Bloqueados</div></div>
+      </div>
+
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="Buscar por nome, cidade ou WhatsApp..." oninput="renderizar()">
+        <button class="filter-chip active" data-filter="todos" onclick="filtrar('todos', this)">Todos</button>
+        <button class="filter-chip" data-filter="pendente" onclick="filtrar('pendente', this)">Pendentes</button>
+        <button class="filter-chip" data-filter="aprovado" onclick="filtrar('aprovado', this)">Aprovados</button>
+        <button class="filter-chip" data-filter="bloqueado" onclick="filtrar('bloqueado', this)">Bloqueados</button>
+        <button class="refresh-btn" onclick="carregarDados()">↻ Atualizar</button>
+      </div>
+
+      <div class="table-wrap">
+        <div id="loadingState" class="loading">Carregando cadastros...</div>
+        <table id="dataTable" style="display:none;">
+          <thead>
+            <tr>
+              <th>Profissional</th>
+              <th>Contato</th>
+              <th>Localização</th>
+              <th>Serviços</th>
+              <th>Experiência</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty-state" style="display:none;">
+          <div class="ic">📋</div>
+          <strong>Nenhum profissional cadastrado ainda</strong>
+          <p>Assim que alguém se cadastrar pelo site, vai aparecer aqui.</p>
+        </div>
       </div>
     </div>
- 
-    <div class="stats-row">
-      <div class="stat-card"><div class="num" id="statTotal">–</div><div class="label">Total de cadastros</div></div>
-      <div class="stat-card"><div class="num" id="statPendente">–</div><div class="label">Pendentes</div></div>
-      <div class="stat-card"><div class="num" id="statAprovado">–</div><div class="label">Aprovados</div></div>
-      <div class="stat-card"><div class="num" id="statBloqueado">–</div><div class="label">Bloqueados</div></div>
-    </div>
- 
-    <div class="toolbar">
-      <input type="text" id="searchInput" placeholder="Buscar por nome, cidade ou WhatsApp..." oninput="renderizar()">
-      <button class="filter-chip active" data-filter="todos" onclick="filtrar('todos', this)">Todos</button>
-      <button class="filter-chip" data-filter="pendente" onclick="filtrar('pendente', this)">Pendentes</button>
-      <button class="filter-chip" data-filter="aprovado" onclick="filtrar('aprovado', this)">Aprovados</button>
-      <button class="filter-chip" data-filter="bloqueado" onclick="filtrar('bloqueado', this)">Bloqueados</button>
-      <button class="refresh-btn" onclick="carregarDados()">↻ Atualizar</button>
-    </div>
- 
-    <div class="table-wrap">
-      <div id="loadingState" class="loading">Carregando cadastros...</div>
-      <table id="dataTable" style="display:none;">
-        <thead>
-          <tr>
-            <th>Profissional</th>
-            <th>Contato</th>
-            <th>Localização</th>
-            <th>Serviços</th>
-            <th>Experiência</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-      <div id="emptyState" class="empty-state" style="display:none;">
-        <div class="ic">📋</div>
-        <strong>Nenhum profissional cadastrado ainda</strong>
-        <p>Assim que alguém se cadastrar pelo site, vai aparecer aqui.</p>
+
+    <!-- ================= ABA PEDIDOS ================= -->
+    <div id="tabPedidos" style="display:none;">
+      <div class="page-title">
+        <div>
+          <h1>Pedidos de orçamento</h1>
+          <p>Envie o orçamento, registre o aceite do cliente e libere o pedido para a profissional.</p>
+        </div>
       </div>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="num" id="statPendentesPedido">–</div><div class="label">Aguardando aprovação</div></div>
+        <div class="stat-card"><div class="num" id="statLiberados">–</div><div class="label">Liberados / em andamento</div></div>
+        <div class="stat-card"><div class="num" id="statConcluidosPedido">–</div><div class="label">Concluídos</div></div>
+        <div class="stat-card"><div class="num" id="statComissaoTotal">–</div><div class="label">Comissão (concluídos)</div></div>
+      </div>
+
+      <div class="toolbar">
+        <button class="refresh-btn" onclick="carregarPedidosAdmin()">↻ Atualizar pedidos</button>
+        <button class="refresh-btn" id="btnNotificacoes" onclick="ativarNotificacoes()" hidden>Ativar notificações do navegador</button>
+      </div>
+
+      <h2 class="section-title">🕒 Aguardando aprovação</h2>
+      <div id="listaPendentes"></div>
+
+      <h2 class="section-title">Aguardando aceite do cliente</h2>
+      <div id="listaAguardandoCliente"></div>
+
+      <h2 class="section-title">✅ Liberados, em andamento e concluídos</h2>
+      <div id="listaLiberados"></div>
+      <details>
+        <summary class="section-title">Cancelados (<span id="totalCancelados">0</span>)</summary>
+        <div id="listaCancelados"></div>
+      </details>
     </div>
   </div>
 </div>
@@ -286,7 +367,8 @@
   function mostrarPainel(){
     document.getElementById('loginGate').style.display = 'none';
     document.getElementById('adminPanel').style.display = 'block';
-    carregarDados();
+    carregarCredenciais().then(carregarDados, carregarDados);
+    iniciarAvisos();
   }
 
   // Ao carregar a página, verifica se já existe uma sessão válida
@@ -296,7 +378,7 @@
       mostrarPainel();
     }
   }
-  verificarSessao();
+
 
  
   async function carregarDados(){
@@ -395,6 +477,7 @@
           </td>
           <td>
             <div style="display:flex;flex-direction:column;gap:6px;">
+              <button class="btn-edit" onclick="abrirModalEditar('${p.id}')">✏️ Editar dados</button>
               <button class="btn-login ${credenciaisExistentes[p.id]?'tem-login':''}" onclick="abrirModalLogin('${p.id}','${(p.nome_completo||'').replace(/'/g,"\\'")}')">
                 ${credenciaisExistentes[p.id] ? '🔑 Editar login' : '+ Criar login'}
               </button>
@@ -422,7 +505,7 @@
   }
  
   async function removerProfissional(id, nome){
-    const confirmado = confirm(`Tem certeza que deseja remover "${nome}" da lista de profissionais?\n\nEssa ação não pode ser desfeita.`);
+    const confirmado = confirm(`Tem certeza que deseja remover "${nome}" da lista de profissionais?\n\nSe ela já tiver pedidos/comissões registrados, esse histórico é mantido, só deixa de mostrar o nome dela.\n\nEssa ação não pode ser desfeita.`);
     if(!confirmado) return;
  
     const { error } = await supabaseClient
@@ -439,6 +522,379 @@
     todosOsDados = todosOsDados.filter(p => p.id !== id);
     atualizarStats();
     renderizar();
+  }
+
+  // ---- ABAS ----
+  function mudarAbaAdmin(aba){
+    document.getElementById('tabBtnProf').classList.toggle('active', aba==='profissionais');
+    document.getElementById('tabBtnPedidos').classList.toggle('active', aba==='pedidos');
+    document.getElementById('tabProfissionais').style.display = aba==='profissionais' ? 'block' : 'none';
+    document.getElementById('tabPedidos').style.display = aba==='pedidos' ? 'block' : 'none';
+    if(aba==='pedidos') carregarPedidosAdmin();
+  }
+
+  // ---- EDITAR CADASTRO DE PROFISSIONAL ----
+  let profParaEditar = null;
+
+  function abrirModalEditar(id){
+    const p = todosOsDados.find(x => x.id === id);
+    if(!p) return;
+    profParaEditar = id;
+    document.getElementById('editNome').value = p.nome_completo || '';
+    document.getElementById('editWhatsapp').value = p.whatsapp || '';
+    document.getElementById('editEmail').value = p.email || '';
+    document.getElementById('editCidade').value = p.cidade || '';
+    document.getElementById('editBairro').value = p.bairro || '';
+    document.getElementById('editServicos').value = (p.servicos_oferecidos || []).join(', ');
+    document.getElementById('editExperiencia').value = p.experiencia || '';
+    document.getElementById('editDisponibilidade').value = p.disponibilidade || '';
+    document.getElementById('editMsg').style.display = 'none';
+    document.getElementById('modalEditar').classList.add('open');
+  }
+
+  function fecharModalEditar(){
+    document.getElementById('modalEditar').classList.remove('open');
+    profParaEditar = null;
+  }
+
+  async function salvarEdicao(){
+    const msg = document.getElementById('editMsg');
+    msg.style.display = 'none';
+
+    const nome = document.getElementById('editNome').value.trim();
+    const whatsapp = document.getElementById('editWhatsapp').value.trim();
+    if(!nome || !whatsapp){
+      msg.textContent = 'Nome e WhatsApp são obrigatórios.';
+      msg.className = 'modal-msg err'; msg.style.display = 'block'; return;
+    }
+
+    const servicos = document.getElementById('editServicos').value
+      .split(',').map(s=>s.trim()).filter(Boolean);
+
+    const dadosAtualizados = {
+      nome_completo: nome,
+      whatsapp: whatsapp,
+      email: document.getElementById('editEmail').value.trim(),
+      cidade: document.getElementById('editCidade').value.trim(),
+      bairro: document.getElementById('editBairro').value.trim(),
+      servicos_oferecidos: servicos,
+      experiencia: document.getElementById('editExperiencia').value.trim(),
+      disponibilidade: document.getElementById('editDisponibilidade').value.trim()
+    };
+
+    const btn = document.getElementById('btnSalvarEdicao');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+
+    const { error } = await supabaseClient
+      .from('profissionais')
+      .update(dadosAtualizados)
+      .eq('id', profParaEditar);
+
+    btn.disabled = false; btn.textContent = 'Salvar alterações →';
+
+    if(error){
+      msg.textContent = 'Erro ao salvar: ' + error.message;
+      msg.className = 'modal-msg err'; msg.style.display = 'block';
+      return;
+    }
+
+    const item = todosOsDados.find(p => p.id === profParaEditar);
+    if(item) Object.assign(item, dadosAtualizados);
+
+    msg.textContent = '✅ Dados atualizados com sucesso!';
+    msg.className = 'modal-msg ok'; msg.style.display = 'block';
+    renderizar();
+    setTimeout(fecharModalEditar, 1000);
+  }
+
+  // ---- PEDIDOS (aprovação de orçamento + comissão) ----
+  let todosOsPedidos = [];
+  let idsPendentes;
+  let timerAvisos;
+  let consultandoPedidos = false;
+
+  function iniciarAvisos(){
+    if(timerAvisos) return;
+    if(window.isSecureContext && 'Notification' in window){
+      document.getElementById('btnNotificacoes').hidden = Notification.permission !== 'default';
+    }
+    verificarNovosPedidos();
+    timerAvisos = setInterval(verificarNovosPedidos, 15000);
+  }
+
+  async function ativarNotificacoes(){
+    try {
+      const permissao = await Notification.requestPermission();
+      document.getElementById('btnNotificacoes').hidden = permissao !== 'default';
+      document.getElementById('avisoPedidos').textContent = permissao === 'granted'
+        ? 'Notificações ativadas enquanto o painel estiver aberto.'
+        : 'Você continua recebendo avisos no painel.';
+    } catch {
+      document.getElementById('avisoPedidos').textContent = 'Você continua recebendo avisos no painel.';
+    }
+  }
+
+  async function verificarNovosPedidos(){
+    if(consultandoPedidos) return;
+    consultandoPedidos = true;
+    try {
+      const { data, error, count } = await supabaseClient.from('pedidos_servico')
+        .select('id', { count: 'exact' }).eq('status', 'aguardando_aprovacao')
+        .order('criado_em', { ascending: false }).order('id');
+      if(error) return;
+      const novos = idsPendentes && data.some(p => !idsPendentes.has(p.id));
+      idsPendentes = new Set(data.map(p => p.id));
+      const badge = document.getElementById('alertPendentes');
+      badge.textContent = count;
+      badge.style.display = count ? 'inline-block' : 'none';
+      if(!novos) return;
+      document.getElementById('avisoPedidos').textContent = 'Chegaram novos pedidos de orçamento. Atualize a lista para vê-los.';
+      if('Notification' in window && Notification.permission === 'granted'){
+        try {
+          const aviso = new Notification('Novo pedido de orçamento', { tag: 'novo-pedido' });
+          aviso.onclick = () => { window.focus(); mudarAbaAdmin('pedidos'); aviso.close(); };
+        } catch {
+          // Alguns navegadores só permitem notificações via service worker.
+        }
+      }
+    } finally {
+      consultandoPedidos = false;
+    }
+  }
+
+  function formatarDataHora(valor){
+    return valor ? new Date(valor).toLocaleString('pt-BR', {
+      dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo'
+    }) : 'Não registrado';
+  }
+
+  function datasPedido(p){
+    const preferencia = p.data_preferida && p.hora_preferida
+      ? p.data_preferida.split('-').reverse().join('/') + ' às ' + p.hora_preferida.slice(0, 5)
+      : 'Não informada';
+    return `<span>Recebido em ${formatarDataHora(p.criado_em)}</span><span>Preferência: ${preferencia}</span>`;
+  }
+
+  async function cancelarPedido(id, statusAtual, btn){
+    if(!confirm('Cancelar este pedido? Ele continuará disponível no histórico.')) return;
+    btn.disabled = true;
+    const { data, error } = await supabaseClient.from('pedidos_servico')
+      .update({ status: 'cancelado', cancelado_em: new Date().toISOString() })
+      .eq('id', id).eq('status', statusAtual).select('id').maybeSingle();
+    if(error){
+      btn.disabled = false;
+      alert('Erro ao cancelar o pedido: ' + error.message);
+      return;
+    }
+    if(!data) alert('O pedido foi alterado. Confira a lista atualizada.');
+    await carregarPedidosAdmin();
+  }
+
+  async function carregarPedidosAdmin(){
+    document.getElementById('listaPendentes').innerHTML = '<div class="loading">Carregando pedidos...</div>';
+    document.getElementById('listaLiberados').innerHTML = '';
+    document.getElementById('listaAguardandoCliente').innerHTML = '';
+
+    const { data, error } = await supabaseClient
+      .from('pedidos_servico')
+      .select('*')
+      .order('criado_em', { ascending: false });
+
+    if(error){
+      document.getElementById('listaPendentes').innerHTML = '<p style="color:red">Erro ao carregar pedidos: '+error.message+'</p>';
+      return;
+    }
+
+    todosOsPedidos = data || [];
+    document.getElementById('avisoPedidos').textContent = '';
+
+    // Garante que temos os dados das profissionais para exibir nome
+    if(!todosOsDados.length){
+      const { data: profs } = await supabaseClient.from('profissionais').select('id, nome_completo');
+      if(profs) todosOsDados = profs;
+    }
+
+    renderizarPedidosAdmin();
+  }
+
+  function nomeProfissional(id){
+    if(!id) return 'Profissional removida';
+    const p = todosOsDados.find(x => x.id === id);
+    return p ? p.nome_completo : 'Profissional removida';
+  }
+
+  function renderizarPedidosAdmin(){
+    const pendentes = todosOsPedidos.filter(p => p.status === 'aguardando_aprovacao');
+    const aguardandoCliente = todosOsPedidos.filter(p => p.status === 'aguardando_cliente');
+    document.getElementById('listaAguardandoCliente').innerHTML = aguardandoCliente.map(p => `
+      <div class="pedido-admin-card">
+        <strong>${p.nome_cliente || '—'}</strong>
+        <div class="pa-info">
+          ${datasPedido(p)}
+          <span>Orçamento de ${formatarValor(p.valor_servico)}</span>
+          <span>Enviado em ${formatarDataHora(p.orcamento_enviado_em)}</span>
+          <span>Aceite até ${formatarDataHora(p.orcamento_expira_em)}</span>
+        </div>
+        ${new Date(p.orcamento_expira_em).getTime() > Date.now()
+          ? `<button class="btn-aprovar" onclick="registrarAceite('${p.id}', this)">Confirmar aceite e liberar</button>`
+          : '<p>Prazo encerrado. O pedido será movido para Cancelados.</p>'}
+        <button class="refresh-btn" onclick="cancelarPedido('${p.id}', 'aguardando_cliente', this)">Cancelar pedido</button>
+      </div>`).join('') || '<p>Nenhum orçamento aguardando aceite.</p>';
+
+    const liberados = todosOsPedidos.filter(p => ['aberto', 'em_andamento', 'concluido'].includes(p.status));
+    const cancelados = todosOsPedidos.filter(p => p.status === 'cancelado');
+    document.getElementById('totalCancelados').textContent = cancelados.length;
+    document.getElementById('listaCancelados').innerHTML = cancelados.map(p => `
+      <div class="pedido-admin-card">
+        <strong>${p.nome_cliente || '—'}</strong>
+        <div class="pa-info"><span>${p.tipo_servico || '—'}</span>${datasPedido(p)}
+          <span>Cancelado em ${formatarDataHora(p.cancelado_em)}</span>
+          ${p.cancelado_por_prazo ? '<span>Motivo: prazo de 7 dias encerrado</span>' : ''}
+        </div>
+      </div>`).join('') || '<p>Nenhum pedido cancelado.</p>';
+
+    document.getElementById('statPendentesPedido').textContent = pendentes.length;
+    document.getElementById('statLiberados').textContent = todosOsPedidos.filter(p=>p.status==='aberto'||p.status==='em_andamento').length;
+    document.getElementById('statConcluidosPedido').textContent = todosOsPedidos.filter(p=>p.status==='concluido').length;
+
+    const comissaoTotal = todosOsPedidos
+      .filter(p => p.status === 'concluido' && p.comissao_valor != null)
+      .reduce((soma, p) => soma + Number(p.comissao_valor), 0);
+    document.getElementById('statComissaoTotal').textContent = 'R$ ' + comissaoTotal.toFixed(2);
+
+    const alertBadge = document.getElementById('alertPendentes');
+    if(pendentes.length > 0){
+      alertBadge.style.display = 'inline-block';
+      alertBadge.textContent = pendentes.length;
+    } else {
+      alertBadge.style.display = 'none';
+    }
+
+    // ---- Lista pendentes (com formulário de aprovação) ----
+    if(pendentes.length === 0){
+      document.getElementById('listaPendentes').innerHTML = '<div class="empty-state"><div class="ic">✅</div><strong>Nenhum pedido aguardando aprovação</strong></div>';
+    } else {
+      document.getElementById('listaPendentes').innerHTML = pendentes.map(p => `
+        <div class="pedido-admin-card">
+          <div class="pa-top">
+            <div>
+              <div class="pa-nome">${p.nome_cliente || '—'}</div>
+              <div class="pa-sub">Profissional escolhida: ${nomeProfissional(p.profissional_id)}</div>
+            </div>
+            <span class="badge pendente">Aguardando aprovação</span>
+          </div>
+          <div class="pa-info">
+            ${datasPedido(p)}
+            <span>🧹 ${p.tipo_servico || '—'}</span>
+            ${p.cidade ? `<span>📍 ${p.cidade}</span>` : ''}
+            ${p.whatsapp_cliente ? `<span>📱 ${p.whatsapp_cliente}</span>` : ''}
+          </div>
+          ${p.descricao ? `<div class="pa-desc">${p.descricao}</div>` : ''}
+          <div class="pa-approve-row">
+            <div class="pa-field">
+              <label>Valor do serviço (R$)</label>
+              <input type="number" step="0.01" min="0" id="valor-${p.id}" placeholder="0,00" oninput="atualizarPreview('${p.id}')">
+            </div>
+            <div class="pa-field">
+              <label>Comissão (%)</label>
+              <input type="number" step="0.1" min="0" max="100" id="perc-${p.id}" placeholder="15" oninput="atualizarPreview('${p.id}')">
+            </div>
+            <div class="pa-preview" id="preview-${p.id}">Informe o valor e a comissão.</div>
+            <button class="refresh-btn" onclick="abrirOrcamentoWhatsApp('${p.id}')">Abrir orçamento no WhatsApp</button>
+            <button class="btn-aprovar" onclick="registrarEnvio('${p.id}', this)">Registrar envio</button>
+            <button class="refresh-btn" onclick="cancelarPedido('${p.id}', 'aguardando_aprovacao', this)">Cancelar pedido</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ---- Lista liberados / em andamento / concluídos ----
+    if(liberados.length === 0){
+      document.getElementById('listaLiberados').innerHTML = '<div class="empty-state"><div class="ic">📋</div><strong>Nenhum pedido liberado ainda</strong></div>';
+    } else {
+      const traduz = {aberto:'Liberado', em_andamento:'Em andamento', concluido:'Concluído'};
+      document.getElementById('listaLiberados').innerHTML = liberados.map(p => `
+        <div class="pedido-admin-card">
+          <div class="pa-top">
+            <div>
+              <div class="pa-nome">${p.nome_cliente || '—'}</div>
+              <div class="pa-sub">Profissional: ${nomeProfissional(p.profissional_id)}</div>
+            </div>
+            <span class="badge ${p.status==='concluido'?'aprovado':'pendente'}">${traduz[p.status] || p.status}</span>
+          </div>
+          <div class="pa-info">
+            ${datasPedido(p)}
+            <span>🧹 ${p.tipo_servico || '—'}</span>
+            ${p.cidade ? `<span>📍 ${p.cidade}</span>` : ''}
+            ${p.valor_servico != null ? `<span>💵 Total: R$ ${Number(p.valor_servico).toFixed(2)}</span>` : ''}
+            ${p.comissao_valor != null ? `<span>🏦 Sua comissão: R$ ${Number(p.comissao_valor).toFixed(2)} (${p.comissao_percentual}%)</span>` : ''}
+          </div>
+          ${p.status !== 'concluido' ? `<button class="refresh-btn" onclick="cancelarPedido('${p.id}', '${p.status}', this)">Cancelar pedido</button>` : ''}
+        </div>
+      `).join('');
+    }
+  }
+
+  function atualizarPreview(id){
+    const valor = parseFloat(document.getElementById('valor-'+id).value) || 0;
+    const perc = parseFloat(document.getElementById('perc-'+id).value) || 0;
+    const comissao = valor * (perc/100);
+    const liquido = valor - comissao;
+    document.getElementById('preview-'+id).innerHTML =
+      `Sua comissão: <strong>R$ ${comissao.toFixed(2)}</strong> · Profissional recebe: R$ ${liquido.toFixed(2)}`;
+  }
+
+  function formatarValor(valor){
+    return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function abrirOrcamentoWhatsApp(id){
+    const pedido = todosOsPedidos.find(p => p.id === id);
+    const valor = Number(document.getElementById('valor-'+id).value);
+    if(!Number.isFinite(valor) || valor < 0.01 || valor > 99999999.99){
+      alert('Informe o valor do orçamento.');
+      return;
+    }
+
+    let numero = (pedido?.whatsapp_cliente || '').replace(/\D/g, '');
+    if(numero.length === 10 || numero.length === 11) numero = '55' + numero;
+    if(!/^55\d{10,11}$/.test(numero)){
+      alert('O pedido está sem um número de WhatsApp brasileiro válido.');
+      return;
+    }
+
+    const mensagem = `Olá! O orçamento da Sisters Who Clean para o seu pedido ficou em ${formatarValor(valor)}. Você tem 7 dias para responder por aqui e confirmar. Depois desse prazo, o pedido será cancelado automaticamente.`;
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`, '_blank', 'noopener,noreferrer');
+  }
+
+  async function registrarEnvio(id, btn){
+    const valor = Number(document.getElementById('valor-'+id).value);
+    const campoComissao = document.getElementById('perc-'+id);
+    const percentual = Number(campoComissao.value);
+    if(!Number.isFinite(valor) || valor < 0.01 || valor > 99999999.99 ||
+       !campoComissao.value || !Number.isFinite(percentual) || percentual < 0 || percentual > 100){
+      alert('Informe o valor do serviço e uma comissão de 0 a 100%.');
+      return;
+    }
+    if(!confirm('Confirma que o orçamento já foi enviado? O prazo de 7 dias começa agora.')) return;
+    await atualizarOrcamento('registrar_envio_orcamento', { pedido: id, valor, percentual }, btn);
+  }
+
+  async function registrarAceite(id, btn){
+    if(!confirm('Confirma que o cliente aceitou o orçamento? O pedido será liberado para a profissional.')) return;
+    await atualizarOrcamento('registrar_aceite_orcamento', { pedido: id }, btn);
+  }
+
+  async function atualizarOrcamento(funcao, dados, btn){
+    btn.disabled = true;
+    const { data, error } = await supabaseClient.rpc(funcao, dados);
+    if(error){
+      btn.disabled = false;
+      alert('Erro ao salvar: ' + error.message);
+      return;
+    }
+    if(!data) alert('O prazo pode ter encerrado ou o pedido já foi alterado. Confira a lista atualizada.');
+    await carregarPedidosAdmin();
   }
 
   // ---- CREDENCIAIS ----
@@ -504,17 +960,12 @@
     navigator.clipboard.writeText(link).then(()=> alert('Link de avaliação copiado!\n\nEnvie para o cliente:\n' + link));
   }
 
-  // Fechar modal clicando fora
-  document.getElementById('modalLogin').addEventListener('click', function(e){
-    if(e.target === this) fecharModal();
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('modalLogin').addEventListener('click', function(e){
+      if(e.target === this) fecharModal();
+    });
+    verificarSessao();
   });
-
-  // Carregar credenciais ao iniciar
-  const _origIniciar = iniciar;
-  iniciar = async function(){
-    _origIniciar();
-    await carregarCredenciais();
-  };
 </script>
 
 <div class="modal-overlay" id="modalLogin">
@@ -534,6 +985,52 @@
       <button class="btn-modal-save" id="btnSalvarLogin" onclick="salvarLogin()">Salvar acesso →</button>
     </div>
     <div class="modal-msg" id="modalMsg"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEditar">
+  <div class="modal modal-wide">
+    <h3>Editar cadastro da profissional</h3>
+    <p>Atualize os dados de contato e do perfil.</p>
+    <div class="modal-grid">
+      <div class="modal-field full">
+        <label>Nome completo *</label>
+        <input id="editNome" type="text">
+      </div>
+      <div class="modal-field">
+        <label>WhatsApp *</label>
+        <input id="editWhatsapp" type="text" placeholder="Ex: 48999998888">
+      </div>
+      <div class="modal-field">
+        <label>E-mail</label>
+        <input id="editEmail" type="email">
+      </div>
+      <div class="modal-field">
+        <label>Cidade</label>
+        <input id="editCidade" type="text">
+      </div>
+      <div class="modal-field">
+        <label>Bairro</label>
+        <input id="editBairro" type="text">
+      </div>
+      <div class="modal-field full">
+        <label>Serviços oferecidos (separe por vírgula)</label>
+        <input id="editServicos" type="text" placeholder="Ex: Faxina, Passar roupa">
+      </div>
+      <div class="modal-field">
+        <label>Experiência</label>
+        <input id="editExperiencia" type="text">
+      </div>
+      <div class="modal-field">
+        <label>Disponibilidade</label>
+        <input id="editDisponibilidade" type="text">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="fecharModalEditar()">Cancelar</button>
+      <button class="btn-modal-save" id="btnSalvarEdicao" onclick="salvarEdicao()">Salvar alterações →</button>
+    </div>
+    <div class="modal-msg" id="editMsg"></div>
   </div>
 </div>
 
