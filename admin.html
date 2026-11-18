@@ -295,7 +295,7 @@
       <div class="page-title">
         <div>
           <h1>Pedidos de orçamento</h1>
-          <p>Aprove o orçamento e defina sua comissão antes de liberar o pedido para a profissional.</p>
+          <p>Envie o orçamento, registre o aceite do cliente e libere o pedido para a profissional.</p>
         </div>
       </div>
 
@@ -313,6 +313,9 @@
 
       <h2 class="section-title">🕒 Aguardando aprovação</h2>
       <div id="listaPendentes"></div>
+
+      <h2 class="section-title">Aguardando aceite do cliente</h2>
+      <div id="listaAguardandoCliente"></div>
 
       <h2 class="section-title">✅ Liberados, em andamento e concluídos</h2>
       <div id="listaLiberados"></div>
@@ -690,6 +693,7 @@
   async function carregarPedidosAdmin(){
     document.getElementById('listaPendentes').innerHTML = '<div class="loading">Carregando pedidos...</div>';
     document.getElementById('listaLiberados').innerHTML = '';
+    document.getElementById('listaAguardandoCliente').innerHTML = '';
 
     const { data, error } = await supabaseClient
       .from('pedidos_servico')
@@ -721,6 +725,22 @@
 
   function renderizarPedidosAdmin(){
     const pendentes = todosOsPedidos.filter(p => p.status === 'aguardando_aprovacao');
+    const aguardandoCliente = todosOsPedidos.filter(p => p.status === 'aguardando_cliente');
+    document.getElementById('listaAguardandoCliente').innerHTML = aguardandoCliente.map(p => `
+      <div class="pedido-admin-card">
+        <strong>${p.nome_cliente || '—'}</strong>
+        <div class="pa-info">
+          ${datasPedido(p)}
+          <span>Orçamento de ${formatarValor(p.valor_servico)}</span>
+          <span>Enviado em ${formatarDataHora(p.orcamento_enviado_em)}</span>
+          <span>Aceite até ${formatarDataHora(p.orcamento_expira_em)}</span>
+        </div>
+        ${new Date(p.orcamento_expira_em).getTime() > Date.now()
+          ? `<button class="btn-aprovar" onclick="registrarAceite('${p.id}', this)">Confirmar aceite e liberar</button>`
+          : '<p>Prazo encerrado. O pedido será movido para Cancelados.</p>'}
+        <button class="refresh-btn" onclick="cancelarPedido('${p.id}', 'aguardando_cliente', this)">Cancelar pedido</button>
+      </div>`).join('') || '<p>Nenhum orçamento aguardando aceite.</p>';
+
     const liberados = todosOsPedidos.filter(p => ['aberto', 'em_andamento', 'concluido'].includes(p.status));
     const cancelados = todosOsPedidos.filter(p => p.status === 'cancelado');
     document.getElementById('totalCancelados').textContent = cancelados.length;
@@ -729,6 +749,7 @@
         <strong>${p.nome_cliente || '—'}</strong>
         <div class="pa-info"><span>${p.tipo_servico || '—'}</span>${datasPedido(p)}
           <span>Cancelado em ${formatarDataHora(p.cancelado_em)}</span>
+          ${p.cancelado_por_prazo ? '<span>Motivo: prazo de 7 dias encerrado</span>' : ''}
         </div>
       </div>`).join('') || '<p>Nenhum pedido cancelado.</p>';
 
@@ -779,7 +800,8 @@
               <input type="number" step="0.1" min="0" max="100" id="perc-${p.id}" placeholder="15" oninput="atualizarPreview('${p.id}')">
             </div>
             <div class="pa-preview" id="preview-${p.id}">Informe o valor e a comissão.</div>
-            <button class="btn-aprovar" id="btn-aprovar-${p.id}" onclick="aprovarPedido('${p.id}')">✅ Aprovar e liberar</button>
+            <button class="refresh-btn" onclick="abrirOrcamentoWhatsApp('${p.id}')">Abrir orçamento no WhatsApp</button>
+            <button class="btn-aprovar" onclick="registrarEnvio('${p.id}', this)">Registrar envio</button>
             <button class="refresh-btn" onclick="cancelarPedido('${p.id}', 'aguardando_aprovacao', this)">Cancelar pedido</button>
           </div>
         </div>
@@ -822,38 +844,56 @@
       `Sua comissão: <strong>R$ ${comissao.toFixed(2)}</strong> · Profissional recebe: R$ ${liquido.toFixed(2)}`;
   }
 
-  async function aprovarPedido(id){
-    const valor = parseFloat(document.getElementById('valor-'+id).value);
-    const perc = parseFloat(document.getElementById('perc-'+id).value);
+  function formatarValor(valor){
+    return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
 
-    if(!valor || valor <= 0 || perc === undefined || isNaN(perc)){
-      alert('Informe o valor do serviço e o percentual de comissão antes de aprovar.');
+  function abrirOrcamentoWhatsApp(id){
+    const pedido = todosOsPedidos.find(p => p.id === id);
+    const valor = Number(document.getElementById('valor-'+id).value);
+    if(!Number.isFinite(valor) || valor < 0.01 || valor > 99999999.99){
+      alert('Informe o valor do orçamento.');
       return;
     }
 
-    const comissaoValor = Math.round(valor * (perc/100) * 100) / 100;
+    let numero = (pedido?.whatsapp_cliente || '').replace(/\D/g, '');
+    if(numero.length === 10 || numero.length === 11) numero = '55' + numero;
+    if(!/^55\d{10,11}$/.test(numero)){
+      alert('O pedido está sem um número de WhatsApp brasileiro válido.');
+      return;
+    }
 
-    const btn = document.getElementById('btn-aprovar-'+id);
-    btn.disabled = true; btn.textContent = 'Aprovando...';
+    const mensagem = `Olá! O orçamento da Sisters Who Clean para o seu pedido ficou em ${formatarValor(valor)}. Você tem 7 dias para responder por aqui e confirmar. Depois desse prazo, o pedido será cancelado automaticamente.`;
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`, '_blank', 'noopener,noreferrer');
+  }
 
-    const { data, error } = await supabaseClient
-      .from('pedidos_servico')
-      .update({
-        status: 'aberto',
-        valor_servico: valor,
-        comissao_percentual: perc,
-        comissao_valor: comissaoValor,
-        aprovado_em: new Date().toISOString()
-      })
-      .eq('id', id).eq('status', 'aguardando_aprovacao').select('id').maybeSingle();
+  async function registrarEnvio(id, btn){
+    const valor = Number(document.getElementById('valor-'+id).value);
+    const campoComissao = document.getElementById('perc-'+id);
+    const percentual = Number(campoComissao.value);
+    if(!Number.isFinite(valor) || valor < 0.01 || valor > 99999999.99 ||
+       !campoComissao.value || !Number.isFinite(percentual) || percentual < 0 || percentual > 100){
+      alert('Informe o valor do serviço e uma comissão de 0 a 100%.');
+      return;
+    }
+    if(!confirm('Confirma que o orçamento já foi enviado? O prazo de 7 dias começa agora.')) return;
+    await atualizarOrcamento('registrar_envio_orcamento', { pedido: id, valor, percentual }, btn);
+  }
 
+  async function registrarAceite(id, btn){
+    if(!confirm('Confirma que o cliente aceitou o orçamento? O pedido será liberado para a profissional.')) return;
+    await atualizarOrcamento('registrar_aceite_orcamento', { pedido: id }, btn);
+  }
+
+  async function atualizarOrcamento(funcao, dados, btn){
+    btn.disabled = true;
+    const { data, error } = await supabaseClient.rpc(funcao, dados);
     if(error){
-      btn.disabled = false; btn.textContent = '✅ Aprovar e liberar';
-      alert('Erro ao aprovar pedido: ' + error.message);
+      btn.disabled = false;
+      alert('Erro ao salvar: ' + error.message);
       return;
     }
-
-    if(!data) alert('O pedido foi alterado. Confira a lista atualizada.');
+    if(!data) alert('O prazo pode ter encerrado ou o pedido já foi alterado. Confira a lista atualizada.');
     await carregarPedidosAdmin();
   }
 

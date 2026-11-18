@@ -223,7 +223,7 @@
     <div class="success-box">
       <div class="success-icon">🎉</div>
       <h2>Pedido enviado com sucesso!</h2>
-      <p>Seu orçamento está em análise pela nossa administração. Assim que for aprovado, a profissional escolhida recebe o pedido e entra em contato com você pelo WhatsApp.</p>
+      <p>A administração vai analisar o pedido e enviar o orçamento pelo WhatsApp. Você terá 7 dias após o envio para confirmar. Depois do aceite, o pedido será liberado para a profissional escolhida.</p>
       <div class="avaliacao-lembrete">
         ⭐ Após o serviço ser concluído, você receberá um link para avaliar a profissional que te atendeu.
       </div>
@@ -338,9 +338,7 @@
     document.getElementById('sl2').classList.add('done');
     document.getElementById('si3').classList.add('active');
 
-    // Obs: o pedido só é enviado para a profissional depois que a
-    // administração aprova o orçamento no painel admin. Por isso não
-    // abrimos mais o WhatsApp da profissional aqui automaticamente.
+    // A profissional recebe o pedido após a administração registrar o aceite do cliente.
   }
 
   carregarProfissionais();
