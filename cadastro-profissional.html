@@ -135,7 +135,7 @@
     <div class="brand-wrap">
       <div class="brand">SISTERS WHO <span>CLEAN</span></div>
     </div>
-    <a class="back-link" href="sisters-who-clean.html">← Voltar para o site</a>
+    <a class="back-link" href="index.html">← Voltar para o site</a>
   </div>
 </header>
 
@@ -155,10 +155,10 @@
   <div id="setupWarning" class="status-msg setup">
     ⚠️ O banco de dados ainda não foi conectado. Veja as instruções no código-fonte (comentário no topo do arquivo) para ativar o cadastro.
   </div>
-  <div id="statusSuccess" class="status-msg success">
+  <div id="statusSuccess" class="status-msg">
     ✅ Cadastro enviado com sucesso! Em breve nossa equipe entrará em contato para validar seus dados.
   </div>
-  <div id="statusError" class="status-msg error">
+  <div id="statusError" class="status-msg">
     ❌ Não foi possível enviar seu cadastro. Verifique os dados e tente novamente.
   </div>
 
@@ -292,7 +292,7 @@
     const servicos = Array.from(document.querySelectorAll('#servicosGrid input:checked')).map(i=>i.value);
 
 
-    const foto = document.getElementById('fotoPerfil').files[0];
+    const foto = document.getElementById('documento').files[0];
 
 let fotoUrl = null;
 

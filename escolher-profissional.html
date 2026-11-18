@@ -192,9 +192,13 @@
         </div>
         <div class="field"><label>Cidade *</label><input id="cidadeCliente" type="text" placeholder="Florianópolis"></div>
       </div>
+      <div class="form-row">
+        <div class="field"><label for="dataPreferida">Data preferida *</label><input id="dataPreferida" type="date" required></div>
+        <div class="field"><label for="horaPreferida">Horário preferido *</label><input id="horaPreferida" type="time" required></div>
+      </div>
       <div class="field full" style="margin-bottom:16px;">
-        <label>Descreva o espaço e melhor data</label>
-        <textarea id="descCliente" placeholder="Metragem, endereço, data preferida..."></textarea>
+        <label for="descCliente">Descreva o espaço</label>
+        <textarea id="descCliente" placeholder="Metragem, endereço, observações..."></textarea>
       </div>
       <div class="field full" style="margin-bottom:20px;">
         <label>Foto do local <span style="color:var(--primary);font-weight:700;">(recomendado)</span></label>
@@ -219,7 +223,7 @@
     <div class="success-box">
       <div class="success-icon">🎉</div>
       <h2>Pedido enviado com sucesso!</h2>
-      <p>Nossa equipe entrará em contato em breve pelo WhatsApp para confirmar o agendamento.</p>
+      <p>Seu orçamento está em análise pela nossa administração. Assim que for aprovado, a profissional escolhida recebe o pedido e entra em contato com você pelo WhatsApp.</p>
       <div class="avaliacao-lembrete">
         ⭐ Após o serviço ser concluído, você receberá um link para avaliar a profissional que te atendeu.
       </div>
@@ -302,6 +306,10 @@
     const tipo = document.getElementById('tipoServico').value;
     if(!nome || !wpp || !tipo){ alert('Preencha nome, WhatsApp e tipo de serviço.'); return; }
 
+    const data = document.getElementById('dataPreferida');
+    const hora = document.getElementById('horaPreferida');
+    if (!data.reportValidity() || !hora.reportValidity()) return;
+
     const btn = document.getElementById('btnEnviar');
     btn.disabled = true; btn.textContent = 'Enviando...';
 
@@ -312,7 +320,9 @@
       cidade: document.getElementById('cidadeCliente').value,
       descricao: document.getElementById('descCliente').value,
       profissional_id: profSelecionada,
-      status: 'aberto'
+      data_preferida: data.value,
+      hora_preferida: hora.value,
+      status: 'aguardando_aprovacao'
     };
 
     const { error } = await sb.from('pedidos_servico').insert([dados]);
@@ -328,28 +338,9 @@
     document.getElementById('sl2').classList.add('done');
     document.getElementById('si3').classList.add('active');
 
-    // Abrir whatsapp também
-    const prof = profissionais.find(p=>p.id===profSelecionada);
-    let numero = prof.whatsapp.replace(/\D/g, '');
-
-if (!numero.startsWith('55')) {
-    numero = '55' + numero;
-}
-    const texto = `Olá, ${prof.nome_completo}! 😊
-
-Meu nome é ${nome} e encontrei seu perfil na Sisters Who Clean.
-
-Gostaria de solicitar um serviço de *${tipo}*.
-
-📍 Cidade: ${dados.cidade || "-"}
-📝 Detalhes: ${dados.descricao || "-"}
-
-Meu WhatsApp é ${wpp}.
-
-Quando puder, entre em contato comigo para conversarmos sobre orçamento e disponibilidade.
-
-Obrigado(a)!`;
-    setTimeout(()=> window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, '_blank'), 1000);
+    // Obs: o pedido só é enviado para a profissional depois que a
+    // administração aprova o orçamento no painel admin. Por isso não
+    // abrimos mais o WhatsApp da profissional aqui automaticamente.
   }
 
   carregarProfissionais();

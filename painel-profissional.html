@@ -240,6 +240,7 @@
       .from('pedidos_servico')
       .select('*')
       .eq('profissional_id', profLogada.id)
+      .in('status', ['aberto', 'em_andamento', 'concluido'])
       .order('criado_em', { ascending: false });
 
     document.getElementById('loadingPedidos').style.display = 'none';
@@ -257,7 +258,12 @@
     }
 
     document.getElementById('listaPedidos').innerHTML = lista.map(p => {
-      const data = new Date(p.criado_em).toLocaleDateString('pt-BR');
+      const data = p.criado_em ? new Date(p.criado_em).toLocaleString('pt-BR', {
+        dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo'
+      }) : 'Não registrado';
+      const preferencia = p.data_preferida && p.hora_preferida
+        ? p.data_preferida.split('-').reverse().join('/') + ' às ' + p.hora_preferida.slice(0, 5)
+        : '';
       const avalLink = `avaliacao.html?prof=${profLogada.id}&pedido=${p.id}`;
       const wppLimpo = (p.whatsapp_cliente||'').replace(/\D/,'');
       return `
@@ -270,9 +276,11 @@
             <span class="badge ${p.status}">${traduzirStatus(p.status)}</span>
           </div>
           <div class="pedido-info">
-            <span>📅 ${data}</span>
+            <span>📅 Recebido em ${data}</span>
+            ${preferencia ? `<span>Preferência: ${preferencia}</span>` : ''}
             ${p.cidade ? `<span>📍 ${p.cidade}</span>` : ''}
             ${p.whatsapp_cliente ? `<span>📱 ${p.whatsapp_cliente}</span>` : ''}
+            ${p.valor_servico != null && p.comissao_valor != null ? `<span>💰 Você recebe: R$ ${(Number(p.valor_servico) - Number(p.comissao_valor)).toFixed(2)}</span>` : ''}
           </div>
           ${p.descricao ? `<div class="pedido-desc">${p.descricao}</div>` : ''}
           <div class="pedido-actions">
@@ -288,8 +296,11 @@
 
   async function atualizarStatus(id, btn){
     btn.disabled = true; btn.textContent = 'Salvando...';
-    const { error } = await sb.from('pedidos_servico').update({status:'concluido'}).eq('id',id);
+    const { data, error } = await sb.from('pedidos_servico').update({status:'concluido'})
+      .eq('id',id).eq('profissional_id', profLogada.id)
+      .in('status', ['aberto', 'em_andamento']).select('id').maybeSingle();
     if(error){ btn.disabled = false; btn.textContent = 'Marcar como concluído ✓'; alert('Erro: '+error.message); return; }
+    if(!data) alert('O pedido foi alterado. Confira a lista atualizada.');
     carregarPedidos();
   }
 
